@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Earnings Radar — Join the Waitlist</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-x: hidden;
+    }
+
+    /* Background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(139, 54, 255, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+    }
+
+    /* Logo / Icon */
+    .logo {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #8b36ff, #5b00d6);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 32px;
+      box-shadow: 0 0 40px rgba(139, 54, 255, 0.5);
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(139, 54, 255, 0.15);
+      border: 1px solid rgba(139, 54, 255, 0.4);
+      color: #b57bff;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #fff 40%, #b57bff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, #8b36ff, #cc88ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    /* Form card */
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(139, 54, 255, 0.2);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .field {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #b57bff;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: #fff;
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    input::placeholder { color: #555; }
+
+    input:focus {
+      border-color: #8b36ff;
+      box-shadow: 0 0 0 3px rgba(139, 54, 255, 0.2);
+    }
+
+    select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: #fff;
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b57bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+    }
+
+    select:focus {
+      border-color: #8b36ff;
+      box-shadow: 0 0 0 3px rgba(139, 54, 255, 0.2);
+    }
+
+    select.placeholder { color: #555; }
+
+    select option { color: #fff; background: #14141c; }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #8b36ff, #6a00e0);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: transform 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 30px rgba(139, 54, 255, 0.4);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(139, 54, 255, 0.55);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    /* Success state */
+    .success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 32px;
+    }
+
+    .success-icon {
+      font-size: 48px;
+      animation: pop 0.4s ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      80% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success h2 {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .success p {
+      color: #888;
+      font-size: 14px;
+    }
+
+    /* Stats row */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 8px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 22px;
+      font-weight: 900;
+      color: #b57bff;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .footer {
+      font-size: 12px;
+      color: #444;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="logo">📡</div>
+    <div class="badge">Early Access</div>
+
+    <h1>Never Miss an<br/><span>Earnings Move</span><br/>Again.</h1>
+    <p class="subtitle">Earnings Radar sends you real-time alerts before stocks report — so you're always one step ahead.</p>
+
+    <div class="card" id="form-card">
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="name" maxlength="100" placeholder="John Smith" />
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="email" maxlength="254" placeholder="you@example.com" />
+      </div>
+      <div class="field">
+        <label>Phone Number</label>
+        <input type="tel" id="phone" maxlength="30" placeholder="+1 (555) 000-0000" />
+      </div>
+      <div class="field">
+        <label>Where did you hear about us?</label>
+        <select id="source" class="placeholder" onchange="this.classList.toggle('placeholder', !this.value)">
+          <option value="" disabled selected>Select one</option>
+          <option value="X">X</option>
+          <option value="Instagram">Instagram</option>
+          <option value="TikTok">TikTok</option>
+        </select>
+      </div>
+      <!-- Honeypot: hidden from humans, bots auto-fill it -->
+      <div class="field" style="position:absolute;left:-9999px;" aria-hidden="true">
+        <label>Company</label>
+        <input type="text" id="company" tabindex="-1" autocomplete="off" />
+      </div>
+      <button class="btn" onclick="handleSubmit()">Join the Waitlist 📡</button>
+    </div>
+
+    <div class="card success" id="success-card">
+      <div class="success-icon">🎉</div>
+      <h2>You're on the list!</h2>
+      <p>We'll notify you the moment Earnings Radar drops.<br/>Stay ahead of every move.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">📡</div>
+        <div class="stat-label">Real-Time Alerts</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">Free</div>
+        <div class="stat-label">Early Access</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">📅</div>
+        <div class="stat-label">Earnings Calendar</div>
+      </div>
+    </div>
+
+    <p class="footer">No spam. We'll only reach out when it's time to launch.</p>
+  </div>
+
+  <script>
+    async function handleSubmit() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const source = document.getElementById('source').value;
+      const company = document.getElementById('company').value.trim(); // honeypot
+
+      if (!name || !email || !phone || !source) {
+        alert('Please fill in all fields to join the waitlist.');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address.');
+        return;
+      }
+
+      const btn = document.querySelector('.btn');
+      btn.textContent = 'Submitting...';
+      btn.disabled = true;
+
+      try {
+        await fetch('https://script.google.com/macros/s/AKfycbwOn3ve8OVs-JSXE4PvIKQUw0Pqg8Blgo6eIab99cqfJUOnLxB3LpNYxWsumdZo-1M1/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, source, company })
+        });
+
+        // no-cors returns opaque response — if fetch didn't throw, it went through
+        document.getElementById('form-card').style.display = 'none';
+        document.getElementById('success-card').style.display = 'flex';
+
+      } catch (err) {
+        btn.textContent = 'Join the Waitlist 📡';
+        btn.disabled = false;
+        alert('Something went wrong. Please try again.');
+      }
+    }
+  </script>
+</body>
+</html>
