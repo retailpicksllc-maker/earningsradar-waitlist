@@ -285,10 +285,9 @@
           <option value="TikTok">TikTok</option>
         </select>
       </div>
-      <!-- Honeypot: hidden from humans, bots auto-fill it -->
-      <div class="field" style="position:absolute;left:-9999px;" aria-hidden="true">
-        <label>Company</label>
-        <input type="text" id="company" tabindex="-1" autocomplete="off" />
+      <!-- Honeypot: hidden from humans and browser autofill; simple bots still fill it -->
+      <div style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+        <input type="text" id="hp_field" name="hp_field" tabindex="-1" autocomplete="off" />
       </div>
       <button class="btn" onclick="handleSubmit()">Join the Waitlist 📡</button>
     </div>
@@ -323,7 +322,7 @@
       const email = document.getElementById('email').value.trim();
       const phone = document.getElementById('phone').value.trim();
       const source = document.getElementById('source').value;
-      const company = document.getElementById('company').value.trim(); // honeypot
+      const company = document.getElementById('hp_field').value.trim(); // honeypot (sent as "company")
 
       if (!name || !email || !phone || !source) {
         alert('Please fill in all fields to join the waitlist.');
