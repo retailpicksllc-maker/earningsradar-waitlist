@@ -346,6 +346,10 @@
     .dreporting { margin: auto; text-align: center; color: var(--purple-light); font-weight: 700; font-size: 15px; }
     .dspin { width: 34px; height: 34px; border: 3px solid rgba(139,54,255,0.25); border-top-color: var(--purple); border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .dtabs { display: flex; gap: 8px; margin-bottom: 4px; }
+    .dtab { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #cfc7e6; padding: 7px 14px; border-radius: 100px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+    .dtab.on { background: rgba(139,54,255,0.18); border-color: rgba(139,54,255,0.4); color: var(--purple-light); }
+    .dtab:hover { border-color: rgba(139,54,255,0.4); }
 
     /* Earnings-call summary example */
     .callsum-doc {
@@ -612,15 +616,45 @@
 
   <script>
     const DEMO = [
-      {sym:"NVDA",name:"NVIDIA",day:"Wed",sess:"After close",sc:"amc",epsEst:0.64,epsAct:0.78,revEst:28.7,revAct:30.0,move:8.2,verdict:"BEAT",ai:"Blowout quarter driven by insatiable AI GPU demand — data-center revenue nearly doubled year over year and guidance came in well above the Street. The after-hours jump reflects continued pricing power."},
-      {sym:"MU",name:"Micron",day:"Wed",sess:"After close",sc:"amc",epsEst:1.65,epsAct:1.79,revEst:8.6,revAct:8.9,move:9.4,verdict:"BEAT",ai:"Beat on both lines as surging high-bandwidth memory demand for AI data centers lifted pricing. Management raised full-year guidance, and the market rewarded the pricing strength."},
-      {sym:"TSLA",name:"Tesla",day:"Wed",sess:"After close",sc:"amc",epsEst:0.61,epsAct:0.52,revEst:25.4,revAct:25.1,move:-6.5,verdict:"MISS",ai:"EPS and revenue both came in light as auto margins compressed under price cuts. Energy storage was a bright spot, but investors focused on softening delivery guidance."},
-      {sym:"JPM",name:"JPMorgan",day:"Fri",sess:"Before open",sc:"bmo",epsEst:4.10,epsAct:4.44,revEst:42.2,revAct:43.3,move:3.1,verdict:"BEAT",ai:"Beat on stronger net interest income and resilient trading revenue. Cautious commentary on future credit losses tempered the reaction, but core fundamentals stayed solid."},
-      {sym:"COST",name:"Costco",day:"Thu",sess:"After close",sc:"amc",epsEst:3.78,epsAct:3.82,revEst:79.3,revAct:79.4,move:1.2,verdict:"MIXED",ai:"A slight EPS beat on essentially in-line revenue. Membership renewals stayed strong, but the muted move shows much of the good news was already priced in."},
-      {sym:"NKE",name:"Nike",day:"Thu",sess:"After close",sc:"amc",epsEst:0.84,epsAct:0.79,revEst:12.9,revAct:12.4,move:-11.0,verdict:"MISS",ai:"Revenue miss paired with soft forward guidance as China demand stayed weak. The steep drop reflects concern about how long the turnaround will take."}
+      {sym:"NVDA",name:"NVIDIA",day:"Wed",sess:"After close",sc:"amc",epsEst:0.64,epsAct:0.78,revEst:28.7,revAct:30.0,move:8.2,verdict:"BEAT",ai:"Blowout quarter driven by insatiable AI GPU demand — data-center revenue nearly doubled year over year and guidance came in well above the Street. The after-hours jump reflects continued pricing power.",
+        sum:{tone:"Bullish",tldr:"Record quarter powered by relentless AI-infrastructure demand. Blackwell is ramping faster than expected and management guided next quarter comfortably above Wall Street — supply, not demand, is the only limiter.",
+          take:["Data-center revenue hit a <b>record</b>, up ~93% YoY on Hopper strength and early Blackwell shipments.","Blackwell ramp is <b>ahead of schedule</b> — several billion in revenue expected this quarter.","Gross margin held in the <b>mid-70s</b> and should stay there as Blackwell scales.","New demand drivers: <b>sovereign AI</b>, enterprise agents, and inference workloads."],
+          guide:"Next-quarter revenue guided to ~$37B vs. ~$35.8B consensus; margin ~73–74% while Blackwell ramps.",
+          qa:{a:"Is Blackwell still supply-constrained?",role:"CFO",e:"Demand continues to exceed supply; availability is improving each month, with a healthier balance in the second half."},
+          watch:"Ongoing China export-control exposure and the pace of Blackwell margin recovery."}},
+      {sym:"MU",name:"Micron",day:"Wed",sess:"After close",sc:"amc",epsEst:1.65,epsAct:1.79,revEst:8.6,revAct:8.9,move:9.4,verdict:"BEAT",ai:"Beat on both lines as surging high-bandwidth memory demand for AI data centers lifted pricing. Management raised full-year guidance, and the market rewarded the pricing strength.",
+        sum:{tone:"Bullish",tldr:"AI-memory demand is driving real pricing power. High-bandwidth memory is effectively sold out, DRAM pricing is climbing, and management raised guidance across the board.",
+          take:["<b>HBM sold out</b> through next year at agreed pricing.","DRAM pricing up sharply on AI data-center demand.","Full-year guidance <b>raised</b> on both revenue and margins.","Capex increasing to expand high-bandwidth-memory capacity."],
+          guide:"Next-quarter revenue and gross margin guided above consensus as pricing improves.",
+          qa:{a:"How much HBM capacity is committed?",role:"CEO",e:"Effectively sold out through the coming year, with pricing locked in for much of it."},
+          watch:"Where we are in the memory cycle and the intensity of capex spending."}},
+      {sym:"TSLA",name:"Tesla",day:"Wed",sess:"After close",sc:"amc",epsEst:0.61,epsAct:0.52,revEst:25.4,revAct:25.1,move:-6.5,verdict:"MISS",ai:"EPS and revenue both came in light as auto margins compressed under price cuts. Energy storage was a bright spot, but investors focused on softening delivery guidance.",
+        sum:{tone:"Cautious",tldr:"Margins were pressured by price cuts and revenue came in light. Energy storage was a bright spot, but softer delivery guidance overshadowed the quarter.",
+          take:["Auto gross margin <b>compressed</b> on continued price cuts.","Energy-storage deployments hit a <b>record</b>.","Full-year delivery growth guidance was <b>trimmed</b>.","Lower-cost next-gen model timeline reiterated."],
+          guide:"Volume growth expected to slow near-term before the new lower-cost model ramps.",
+          qa:{a:"When does the affordable model ship?",role:"CEO",e:"On track for production start in the coming year; more detail at the next update."},
+          watch:"Margin trajectory and how sensitive demand is to further price changes."}},
+      {sym:"JPM",name:"JPMorgan",day:"Fri",sess:"Before open",sc:"bmo",epsEst:4.10,epsAct:4.44,revEst:42.2,revAct:43.3,move:3.1,verdict:"BEAT",ai:"Beat on stronger net interest income and resilient trading revenue. Cautious commentary on future credit losses tempered the reaction, but core fundamentals stayed solid.",
+        sum:{tone:"Constructive",tldr:"A clean beat on net interest income and trading, paired with prudent, cautious commentary on future credit. Fundamentals stayed solid and capital returns continue.",
+          take:["Net interest income came in <b>above expectations</b>.","Trading and investment-banking fees were strong.","Credit costs still low but <b>reserves are building</b>.","Buybacks and dividends continue at a healthy pace."],
+          guide:"Full-year net-interest-income guidance nudged higher; watching deposit costs.",
+          qa:{a:"Outlook on credit normalization?",role:"CFO",e:"Losses remain benign, but we're provisioning prudently for a normalizing environment."},
+          watch:"Deposit repricing and commercial-real-estate exposure."}},
+      {sym:"COST",name:"Costco",day:"Thu",sess:"After close",sc:"amc",epsEst:3.78,epsAct:3.82,revEst:79.3,revAct:79.4,move:1.2,verdict:"MIXED",ai:"A slight EPS beat on essentially in-line revenue. Membership renewals stayed strong, but the muted move shows much of the good news was already priced in.",
+        sum:{tone:"Neutral",tldr:"A slight EPS beat on in-line sales. The membership engine stayed sticky, but with the stock priced for perfection the reaction was muted.",
+          take:["EPS a <b>touch above</b> estimates; revenue essentially in line.","Membership <b>renewal rates near record</b> highs.","Traffic growth outpaced average ticket size.","No membership-fee increase announced yet."],
+          guide:"Management stayed measured; no formal quarterly guidance, as usual.",
+          qa:{a:"Timing of a membership-fee increase?",role:"CFO",e:"Nothing to announce today — it's more a question of when than if."},
+          watch:"Consumer spending trends and the timing of any fee increase."}},
+      {sym:"NKE",name:"Nike",day:"Thu",sess:"After close",sc:"amc",epsEst:0.84,epsAct:0.79,revEst:12.9,revAct:12.4,move:-11.0,verdict:"MISS",ai:"Revenue miss paired with soft forward guidance as China demand stayed weak. The steep drop reflects concern about how long the turnaround will take.",
+        sum:{tone:"Cautious",tldr:"A revenue miss and soft guidance as China demand stayed weak. Management leaned on the product pipeline, but signaled the turnaround will take several quarters.",
+          take:["Revenue <b>missed</b>; China demand remained soft.","Inventory improving, but promotions pressured margins.","Forward guidance was <b>cut</b>.","New product pipeline emphasized as the recovery driver."],
+          guide:"Next-quarter revenue guided below consensus; a second-half recovery is the hope.",
+          qa:{a:"How long is the China recovery?",role:"CEO",e:"It's a multi-quarter effort — we're being realistic about the pace."},
+          watch:"China's trajectory and the wholesale-channel reset."}}
     ];
 
-    let aiTimer = null, countTimers = [];
+    let aiTimer = null, countTimers = [], curC = null;
 
     function openDemo(){ renderCal(); resetPanel(); document.getElementById('demoOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
     function closeDemo(){ document.getElementById('demoOverlay').classList.remove('open'); document.body.style.overflow=''; clearAnims(); }
@@ -656,13 +690,42 @@
       document.getElementById('demoPanel').innerHTML='<div class="dreporting"><div class="dspin"></div>$'+c.sym+' is reporting…</div>';
       setTimeout(function(){ renderResult(c); btn.disabled=false; }, 1100);
     }
+    function tabBar(active){
+      return '<div class="dtabs">'+
+        '<button class="dtab '+(active==='r'?'on':'')+'" onclick="showReaction()">Reaction</button>'+
+        '<button class="dtab '+(active==='s'?'on':'')+'" onclick="showSummary()">AI Call Summary</button>'+
+      '</div>';
+    }
+    function showReaction(){ if(curC) renderResult(curC); }
+    function showSummary(){ if(curC) renderSummary(curC); }
+    function renderSummary(c){
+      curC=c; clearAnims();
+      var s=c.sum;
+      var bull=(s.tone==='Bullish'||s.tone==='Constructive')?' bull':'';
+      var take=s.take.map(function(t){ return '<li>'+t+'</li>'; }).join('');
+      document.getElementById('demoPanel').innerHTML=
+        '<div class="dcard">'+
+          tabBar('s')+
+          '<div class="dcard-head"><div><div class="dcard-sym" style="font-size:24px;">$'+c.sym+'</div><div class="dcard-name">'+c.name+' · earnings call</div></div>'+
+            '<span class="cs-tag">✦ AI Summary · Claude</span></div>'+
+          '<div class="cs-chips"><span class="cs-chip'+bull+'">Tone: '+s.tone+'</span><span class="cs-chip">'+c.verdict+'</span></div>'+
+          '<div class="cs-label">TL;DR</div><p class="cs-tldr">'+s.tldr+'</p>'+
+          '<div class="cs-label">Key takeaways</div><ul class="cs-list">'+take+'</ul>'+
+          '<div class="cs-label">Guidance</div><p class="cs-tldr">'+s.guide+'</p>'+
+          '<div class="cs-label">Notable Q&amp;A</div><div class="cs-qa"><b>Analyst:</b> '+s.qa.a+'<br/><b>'+s.qa.role+':</b> '+s.qa.e+'</div>'+
+          '<div class="cs-label">Watch</div><p class="cs-tldr">'+s.watch+'</p>'+
+          '<div class="cs-foot">✦ Generated by Claude from the full call transcript · sample data</div>'+
+        '</div>';
+    }
+
     function renderResult(c){
-      clearAnims();
+      curC=c; clearAnims();
       var surprise=((c.epsAct-c.epsEst)/Math.abs(c.epsEst))*100;
       var barW=Math.min(94, Math.max(10, 50+surprise*1.6));
       var up=c.move>=0;
       document.getElementById('demoPanel').innerHTML=
         '<div class="dcard">'+
+          tabBar('r')+
           '<div class="dcard-head"><div><div class="dcard-sym">$'+c.sym+'</div><div class="dcard-name">'+c.name+'</div></div>'+
             '<div class="dcard-verdict v-'+c.verdict+'">'+c.verdict+'</div></div>'+
           '<div class="dstat-row">'+
