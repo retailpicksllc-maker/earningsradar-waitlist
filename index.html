@@ -158,6 +158,25 @@
     .bar { height: 7px; background: rgba(255,255,255,0.08); border-radius: 100px; overflow: hidden; }
     .bar > span { display: block; height: 100%; width: 72%; background: linear-gradient(90deg, var(--green), #10b981); border-radius: 100px; }
     .cb-react { font-size: 13px; font-weight: 700; color: var(--green); }
+    .cb-ai { font-size: 11.5px; color: #c9b8ff; line-height: 1.45; border-top: 1px solid rgba(139,54,255,0.25); padding-top: 9px; margin-top: 2px; }
+    .cb-ai-tag { display: inline-block; font-weight: 800; color: var(--purple-light); margin-right: 4px; }
+
+    /* AI insights band */
+    .ai-band {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: center;
+      background: linear-gradient(135deg, rgba(139,54,255,0.14), rgba(139,54,255,0.03));
+      border: 1px solid var(--border); border-radius: 24px; padding: 40px;
+    }
+    @media (max-width: 820px) { .ai-band { grid-template-columns: 1fr; padding: 28px; } }
+    .ai-copy .eyebrow { text-align: left; margin-bottom: 12px; }
+    .ai-copy h2 { text-align: left; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 14px; }
+    .ai-copy p { color: var(--muted); font-size: 16px; margin-bottom: 26px; }
+    .ai-quote {
+      background: rgba(10,10,15,0.6); border: 1px solid rgba(139,54,255,0.3);
+      border-radius: 16px; padding: 22px; box-shadow: 0 0 40px rgba(139,54,255,0.12);
+    }
+    .ai-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--purple-light); letter-spacing: 0.5px; margin-bottom: 12px; }
+    .ai-quote p { color: #e6dcff; font-size: 15px; line-height: 1.6; }
 
     /* Sections */
     section { padding: 60px 0; }
@@ -227,7 +246,7 @@
     <header class="hero">
       <div class="badge">Early Access</div>
       <h1>Never Miss an<br/><span>Earnings Move</span> Again.</h1>
-      <p class="sub">Earnings Radar tracks every upcoming report, alerts you before stocks announce, and shows you the beat-or-miss reaction the moment numbers drop — all in one place.</p>
+      <p class="sub">Earnings Radar tracks every upcoming report, alerts you before stocks announce, and shows you the beat-or-miss reaction the moment numbers drop — with plain-English AI insights, powered by Claude, explaining what actually moved the stock.</p>
       <div class="cta-row">
         <a href="/waitlist.html" class="btn-primary">Join the Waitlist 📡</a>
         <a href="#features" class="btn-ghost">See how it works</a>
@@ -273,6 +292,7 @@
             <div class="cb-stat">Revenue <b>$8.9B</b> vs <b>$8.6B</b> est</div>
             <div class="bar"><span></span></div>
             <div class="cb-react">▲ +9.4% after hours</div>
+            <div class="cb-ai"><span class="cb-ai-tag">✦ AI · Claude</span> Beat driven by surging AI-memory demand; guidance raised.</div>
           </div>
         </div>
       </div>
@@ -298,6 +318,22 @@
           <div class="ic">⚡</div>
           <h3>Beat / miss reactions</h3>
           <p>EPS and revenue vs. estimates, surprise %, and the after-hours price move — rendered into instant reaction cards.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI insights -->
+    <section id="ai">
+      <div class="ai-band">
+        <div class="ai-copy">
+          <div class="eyebrow">Powered by Claude</div>
+          <h2>AI insights that explain the move</h2>
+          <p>Numbers only tell half the story. Every report comes with a plain-English breakdown from Claude — what beat, what missed, and why the stock is really reacting the way it is. No jargon, no digging through the release.</p>
+          <a href="/waitlist.html" class="btn-primary">Join the Waitlist 📡</a>
+        </div>
+        <div class="ai-quote">
+          <div class="ai-tag">✦ AI Insight · Powered by Claude</div>
+          <p>"$MU beat on both EPS and revenue, driven by surging high-bandwidth memory demand for AI data centers. Management raised full-year guidance — the after-hours pop reflects growing confidence in pricing power heading into next quarter."</p>
         </div>
       </div>
     </section>
