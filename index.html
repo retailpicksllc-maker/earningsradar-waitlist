@@ -346,6 +346,31 @@
     .dreporting { margin: auto; text-align: center; color: var(--purple-light); font-weight: 700; font-size: 15px; }
     .dspin { width: 34px; height: 34px; border: 3px solid rgba(139,54,255,0.25); border-top-color: var(--purple); border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Earnings-call summary example */
+    .callsum-doc {
+      max-width: 740px; margin: 0 auto;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px 30px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.4), 0 0 50px rgba(139,54,255,0.1);
+      text-align: left;
+    }
+    .cs-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .cs-co { font-weight: 800; font-size: 17px; }
+    .cs-tag { font-size: 11px; font-weight: 800; color: var(--purple-light); background: rgba(139,54,255,0.15); border: 1px solid rgba(139,54,255,0.3); padding: 5px 11px; border-radius: 100px; white-space: nowrap; }
+    .cs-sub { font-size: 12px; color: var(--muted); margin: 4px 0 16px; }
+    .cs-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .cs-chip { font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #cfc7e6; border: 1px solid rgba(255,255,255,0.08); }
+    .cs-chip.bull { color: var(--green); background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.3); }
+    .cs-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--purple-light); font-weight: 800; margin: 20px 0 9px; }
+    .cs-tldr { font-size: 14.5px; line-height: 1.65; color: #e6dcff; }
+    .cs-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .cs-list li { position: relative; padding-left: 20px; font-size: 13.5px; line-height: 1.55; color: #cfc9db; }
+    .cs-list li::before { content: '▸'; position: absolute; left: 0; color: var(--purple-light); }
+    .cs-list li b { color: #fff; font-weight: 700; }
+    .cs-qa { background: rgba(139,54,255,0.06); border: 1px solid rgba(139,54,255,0.2); border-radius: 12px; padding: 13px 15px; font-size: 13px; line-height: 1.6; color: #cfc9db; }
+    .cs-qa b { color: var(--purple-light); }
+    .cs-foot { margin-top: 20px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
   </style>
 </head>
 <body>
@@ -482,6 +507,50 @@
           <div class="ai-tag">✦ AI Insight · Powered by Claude</div>
           <p>"$MU beat on both EPS and revenue, driven by surging high-bandwidth memory demand for AI data centers. Management raised full-year guidance — the after-hours pop reflects growing confidence in pricing power heading into next quarter."</p>
         </div>
+      </div>
+    </section>
+
+    <!-- Earnings-call summary example -->
+    <section id="callsummary">
+      <div class="eyebrow">Powered by Claude</div>
+      <h2 class="h2">AI summaries of every earnings call</h2>
+      <p class="lead">A 45-minute call, distilled to a 30-second read. Claude digests the full transcript — prepared remarks and analyst Q&amp;A — and hands you only what moves the stock.</p>
+      <div class="callsum-doc">
+        <div class="cs-top">
+          <div>
+            <div class="cs-co">NVIDIA — Q4 FY25 Earnings Call</div>
+            <div class="cs-sub">48-minute call · summarized in seconds</div>
+          </div>
+          <span class="cs-tag">✦ AI Summary · Claude</span>
+        </div>
+        <div class="cs-chips">
+          <span class="cs-chip bull">Tone: Bullish</span>
+          <span class="cs-chip">Revenue $39.3B · +78% YoY</span>
+          <span class="cs-chip">EPS beat</span>
+          <span class="cs-chip">Guidance raised</span>
+        </div>
+
+        <div class="cs-label">TL;DR</div>
+        <p class="cs-tldr">Record quarter powered by relentless AI-infrastructure demand. Blackwell is ramping faster than expected, data-center revenue hit an all-time high, and management guided next quarter comfortably above Wall Street — supply, not demand, is the only limiter.</p>
+
+        <div class="cs-label">Key takeaways</div>
+        <ul class="cs-list">
+          <li>Data-center revenue reached a record <b>$35.6B</b>, up ~93% YoY, on Hopper strength and early Blackwell shipments.</li>
+          <li>Blackwell ramp is <b>ahead of schedule</b>; management expects "several billion" in Blackwell revenue this quarter.</li>
+          <li>Gross margin held in the <b>mid-70s</b> and is expected to stay there as Blackwell scales.</li>
+          <li>New demand drivers called out: <b>sovereign AI</b>, enterprise agents, and inference workloads.</li>
+        </ul>
+
+        <div class="cs-label">Guidance</div>
+        <p class="cs-tldr">Q1 revenue guided to <b style="color:#fff">~$37B</b> vs. ~$35.8B consensus; gross margin ~73–74% while Blackwell ramps, recovering toward the mid-70s later in the year.</p>
+
+        <div class="cs-label">Notable Q&amp;A</div>
+        <div class="cs-qa"><b>Analyst:</b> Is Blackwell still supply-constrained?<br/><b>CFO:</b> Demand continues to exceed supply; availability is improving each month, with a healthier balance expected in the second half.</div>
+
+        <div class="cs-label">Watch</div>
+        <p class="cs-tldr">Ongoing China export-control exposure and the pace of Blackwell margin recovery.</p>
+
+        <div class="cs-foot">✦ Generated by Claude from the full call transcript · sample for demonstration</div>
       </div>
     </section>
 
