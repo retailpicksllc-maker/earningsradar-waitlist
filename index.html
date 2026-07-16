@@ -242,6 +242,110 @@
       .sub { font-size: 17px; }
       .h2, .cta-band h2 { font-size: 28px; }
     }
+
+    /* Nav buttons */
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-demo {
+      background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.18);
+      padding: 9px 16px; border-radius: 100px; font-weight: 600; font-size: 14px;
+      cursor: pointer; font-family: 'Inter', sans-serif; transition: border 0.2s, background 0.2s;
+    }
+    .nav-demo:hover { border-color: var(--purple); background: rgba(139,54,255,0.1); }
+    .btn-ghost { cursor: pointer; font-family: 'Inter', sans-serif; }
+    @media (max-width: 520px) { .nav-demo { display: none; } }
+
+    /* Demo modal */
+    .demo-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(5,5,10,0.72); backdrop-filter: blur(6px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .demo-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .demo-modal {
+      width: 100%; max-width: 880px; max-height: 90vh; overflow: hidden;
+      background: #0d0d14; border: 1px solid rgba(139,54,255,0.3);
+      border-radius: 20px; display: flex; flex-direction: column;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 60px rgba(139,54,255,0.15);
+      animation: popIn 0.25s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes popIn { from { transform: scale(0.94) translateY(10px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+    .demo-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .demo-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; }
+    .demo-title .mark { width: 30px; height: 30px; border-radius: 9px; font-size: 15px; }
+    .demo-live { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--green); background: rgba(52,211,153,0.15); padding: 3px 8px; border-radius: 100px; }
+    .demo-close {
+      background: rgba(255,255,255,0.06); border: none; color: #aaa; width: 32px; height: 32px;
+      border-radius: 9px; font-size: 20px; cursor: pointer; line-height: 1; transition: background 0.2s, color 0.2s;
+    }
+    .demo-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .demo-body { display: grid; grid-template-columns: 260px 1fr; gap: 0; overflow: hidden; flex: 1; min-height: 0; }
+    @media (max-width: 680px) { .demo-body { grid-template-columns: 1fr; } }
+
+    .demo-cal { border-right: 1px solid rgba(255,255,255,0.07); padding: 16px; display: flex; flex-direction: column; overflow-y: auto; }
+    @media (max-width: 680px) { .demo-cal { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); max-height: 220px; } }
+    .demo-cal-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; font-weight: 700; }
+    .demo-crow {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+      transition: border 0.15s, background 0.15s, transform 0.1s;
+    }
+    .demo-crow:hover { border-color: rgba(139,54,255,0.5); background: rgba(139,54,255,0.08); }
+    .demo-crow.active { border-color: var(--purple); background: rgba(139,54,255,0.14); }
+    .demo-crow .sym { font-weight: 800; font-size: 13px; }
+    .demo-crow .name { font-size: 10.5px; color: var(--muted); }
+    .demo-crow .sess { font-size: 9.5px; font-weight: 700; padding: 3px 7px; border-radius: 100px; white-space: nowrap; }
+    .sess.amc { background: rgba(139,54,255,0.18); color: var(--purple-light); }
+    .sess.bmo { background: rgba(52,211,153,0.14); color: var(--green); }
+    .demo-sim {
+      margin-top: auto; width: 100%; padding: 12px; border: none; border-radius: 11px;
+      background: linear-gradient(135deg, var(--purple), #6a00e0); color: #fff; font-weight: 700;
+      font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; box-shadow: 0 4px 22px rgba(139,54,255,0.4);
+      transition: transform 0.12s; position: sticky; bottom: 0;
+    }
+    .demo-sim:hover { transform: translateY(-2px); }
+    .demo-sim:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+    .demo-panel { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; }
+    .demo-empty { margin: auto; text-align: center; color: var(--muted); font-size: 14.5px; max-width: 320px; line-height: 1.6; }
+    .demo-empty b { color: var(--purple-light); }
+
+    .dcard { display: flex; flex-direction: column; gap: 14px; animation: fadeIn 0.25s ease; }
+    .dcard-head { display: flex; align-items: center; justify-content: space-between; }
+    .dcard-sym { font-size: 30px; font-weight: 900; }
+    .dcard-name { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .dcard-verdict { font-size: 13px; font-weight: 800; letter-spacing: 1px; padding: 6px 14px; border-radius: 100px; }
+    .v-BEAT { color: var(--green); background: rgba(52,211,153,0.15); }
+    .v-MISS { color: var(--red); background: rgba(248,113,113,0.15); }
+    .v-MIXED { color: var(--amber); background: rgba(251,191,36,0.15); }
+    .dstat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .dstat { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 14px; }
+    .dstat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .dstat .val { font-size: 20px; font-weight: 800; }
+    .dstat .est { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+    .dbar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 100px; overflow: hidden; }
+    .dbar > span { display: block; height: 100%; width: 0; border-radius: 100px; transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
+    .bar-BEAT > span { background: linear-gradient(90deg, var(--green), #10b981); }
+    .bar-MISS > span { background: linear-gradient(90deg, var(--red), #dc2626); }
+    .bar-MIXED > span { background: linear-gradient(90deg, var(--amber), #f59e0b); }
+    .dmove { font-size: 16px; font-weight: 800; }
+    .dmove.up { color: var(--green); } .dmove.down { color: var(--red); }
+    .dai {
+      background: rgba(139,54,255,0.08); border: 1px solid rgba(139,54,255,0.25);
+      border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.6; color: #e6dcff; min-height: 20px;
+    }
+    .dai-tag { display: block; font-size: 11px; font-weight: 800; color: var(--purple-light); letter-spacing: 0.5px; margin-bottom: 8px; }
+    .dai .cursor { display: inline-block; width: 7px; height: 14px; background: var(--purple-light); margin-left: 2px; vertical-align: middle; animation: blink 0.8s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .demo-foot { padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.07); font-size: 12px; color: var(--muted); text-align: center; }
+    .demo-foot a { color: var(--purple-light); text-decoration: none; font-weight: 600; }
+    .dreporting { margin: auto; text-align: center; color: var(--purple-light); font-weight: 700; font-size: 15px; }
+    .dspin { width: 34px; height: 34px; border: 3px solid rgba(139,54,255,0.25); border-top-color: var(--purple); border-radius: 50%; margin: 0 auto 14px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -249,7 +353,10 @@
 
     <nav>
       <div class="brand"><span class="mark">📡</span> Earnings Radar</div>
-      <a href="/waitlist.html" class="nav-cta">Join the Waitlist</a>
+      <div class="nav-right">
+        <button class="nav-demo" onclick="openDemo()">▶ Live Demo</button>
+        <a href="/waitlist.html" class="nav-cta">Join the Waitlist</a>
+      </div>
     </nav>
 
     <!-- Hero -->
@@ -259,7 +366,7 @@
       <p class="sub">Earnings Radar tracks every upcoming report, alerts you before stocks announce, and shows you the beat-or-miss reaction the moment numbers drop — with plain-English AI insights, powered by Claude, explaining what actually moved the stock.</p>
       <div class="cta-row">
         <a href="/waitlist.html" class="btn-primary">Join the Waitlist 📡</a>
-        <a href="#features" class="btn-ghost">See how it works</a>
+        <button class="btn-ghost" onclick="openDemo()">▶ Try the live demo</button>
       </div>
     </header>
 
@@ -414,5 +521,103 @@
     </footer>
 
   </div>
+
+  <!-- Demo popup -->
+  <div class="demo-overlay" id="demoOverlay" onclick="if(event.target===this)closeDemo()">
+    <div class="demo-modal">
+      <div class="demo-head">
+        <div class="demo-title"><span style="font-size:16px;">📡</span> Earnings Radar — Live Demo <span class="demo-live">DEMO</span></div>
+        <button class="demo-close" onclick="closeDemo()" aria-label="Close">×</button>
+      </div>
+      <div class="demo-body">
+        <div class="demo-cal">
+          <div class="demo-cal-label">This week · tap a company</div>
+          <div id="demoCalList"></div>
+          <button class="demo-sim" id="simBtn" onclick="simulateDemo()">⚡ Simulate an earnings drop</button>
+        </div>
+        <div class="demo-panel" id="demoPanel"></div>
+      </div>
+      <div class="demo-foot">Sample data for demonstration. <a href="/waitlist.html">Join the waitlist →</a></div>
+    </div>
+  </div>
+
+  <script>
+    const DEMO = [
+      {sym:"NVDA",name:"NVIDIA",day:"Wed",sess:"After close",sc:"amc",epsEst:0.64,epsAct:0.78,revEst:28.7,revAct:30.0,move:8.2,verdict:"BEAT",ai:"Blowout quarter driven by insatiable AI GPU demand — data-center revenue nearly doubled year over year and guidance came in well above the Street. The after-hours jump reflects continued pricing power."},
+      {sym:"MU",name:"Micron",day:"Wed",sess:"After close",sc:"amc",epsEst:1.65,epsAct:1.79,revEst:8.6,revAct:8.9,move:9.4,verdict:"BEAT",ai:"Beat on both lines as surging high-bandwidth memory demand for AI data centers lifted pricing. Management raised full-year guidance, and the market rewarded the pricing strength."},
+      {sym:"TSLA",name:"Tesla",day:"Wed",sess:"After close",sc:"amc",epsEst:0.61,epsAct:0.52,revEst:25.4,revAct:25.1,move:-6.5,verdict:"MISS",ai:"EPS and revenue both came in light as auto margins compressed under price cuts. Energy storage was a bright spot, but investors focused on softening delivery guidance."},
+      {sym:"JPM",name:"JPMorgan",day:"Fri",sess:"Before open",sc:"bmo",epsEst:4.10,epsAct:4.44,revEst:42.2,revAct:43.3,move:3.1,verdict:"BEAT",ai:"Beat on stronger net interest income and resilient trading revenue. Cautious commentary on future credit losses tempered the reaction, but core fundamentals stayed solid."},
+      {sym:"COST",name:"Costco",day:"Thu",sess:"After close",sc:"amc",epsEst:3.78,epsAct:3.82,revEst:79.3,revAct:79.4,move:1.2,verdict:"MIXED",ai:"A slight EPS beat on essentially in-line revenue. Membership renewals stayed strong, but the muted move shows much of the good news was already priced in."},
+      {sym:"NKE",name:"Nike",day:"Thu",sess:"After close",sc:"amc",epsEst:0.84,epsAct:0.79,revEst:12.9,revAct:12.4,move:-11.0,verdict:"MISS",ai:"Revenue miss paired with soft forward guidance as China demand stayed weak. The steep drop reflects concern about how long the turnaround will take."}
+    ];
+
+    let aiTimer = null, countTimers = [];
+
+    function openDemo(){ renderCal(); resetPanel(); document.getElementById('demoOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
+    function closeDemo(){ document.getElementById('demoOverlay').classList.remove('open'); document.body.style.overflow=''; clearAnims(); }
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDemo(); });
+
+    function clearAnims(){ if(aiTimer) clearInterval(aiTimer); countTimers.forEach(function(t){ clearInterval(t); }); countTimers=[]; }
+    function resetPanel(){
+      document.getElementById('demoPanel').innerHTML='<div class="demo-empty">Tap a company on the left, or hit <b>Simulate an earnings drop</b> to watch a report land live.</div>';
+      var rows=document.querySelectorAll('.demo-crow'); for(var k=0;k<rows.length;k++) rows[k].classList.remove('active');
+    }
+    function renderCal(){
+      document.getElementById('demoCalList').innerHTML = DEMO.map(function(c,i){
+        return '<div class="demo-crow" id="crow'+i+'" onclick="selectCard('+i+')">'+
+          '<div><div class="sym">$'+c.sym+'</div><div class="name">'+c.name+' · '+c.day+'</div></div>'+
+          '<div class="sess '+c.sc+'">'+c.sess+'</div></div>';
+      }).join('');
+    }
+    function fmtEps(v){ return '$'+v.toFixed(2); }
+    function fmtRev(v){ return '$'+v.toFixed(1)+'B'; }
+
+    function selectCard(i){
+      clearAnims();
+      var rows=document.querySelectorAll('.demo-crow'); for(var k=0;k<rows.length;k++) rows[k].classList.remove('active');
+      document.getElementById('crow'+i).classList.add('active');
+      renderResult(DEMO[i]);
+    }
+    function simulateDemo(){
+      clearAnims();
+      var btn=document.getElementById('simBtn'); btn.disabled=true;
+      var rows=document.querySelectorAll('.demo-crow'); for(var k=0;k<rows.length;k++) rows[k].classList.remove('active');
+      var i=Math.floor(Math.random()*DEMO.length); var c=DEMO[i];
+      document.getElementById('crow'+i).classList.add('active');
+      document.getElementById('demoPanel').innerHTML='<div class="dreporting"><div class="dspin"></div>$'+c.sym+' is reporting…</div>';
+      setTimeout(function(){ renderResult(c); btn.disabled=false; }, 1100);
+    }
+    function renderResult(c){
+      clearAnims();
+      var surprise=((c.epsAct-c.epsEst)/Math.abs(c.epsEst))*100;
+      var barW=Math.min(94, Math.max(10, 50+surprise*1.6));
+      var up=c.move>=0;
+      document.getElementById('demoPanel').innerHTML=
+        '<div class="dcard">'+
+          '<div class="dcard-head"><div><div class="dcard-sym">$'+c.sym+'</div><div class="dcard-name">'+c.name+'</div></div>'+
+            '<div class="dcard-verdict v-'+c.verdict+'">'+c.verdict+'</div></div>'+
+          '<div class="dstat-row">'+
+            '<div class="dstat"><div class="lbl">EPS</div><div class="val" id="epsVal">'+fmtEps(c.epsEst)+'</div><div class="est">est '+fmtEps(c.epsEst)+'</div></div>'+
+            '<div class="dstat"><div class="lbl">Revenue</div><div class="val" id="revVal">'+fmtRev(c.revEst)+'</div><div class="est">est '+fmtRev(c.revEst)+'</div></div>'+
+          '</div>'+
+          '<div class="dbar bar-'+c.verdict+'"><span id="dbarFill"></span></div>'+
+          '<div class="dmove '+(up?'up':'down')+'">'+(up?'▲ +':'▼ ')+c.move.toFixed(1)+'% after hours</div>'+
+          '<div class="dai"><span class="dai-tag">✦ AI Insight · Powered by Claude</span><span id="aiText"></span><span class="cursor" id="aiCursor"></span></div>'+
+        '</div>';
+      requestAnimationFrame(function(){ var f=document.getElementById('dbarFill'); if(f) f.style.width=barW+'%'; });
+      countUp('epsVal', c.epsEst, c.epsAct, fmtEps);
+      countUp('revVal', c.revEst, c.revAct, fmtRev);
+      setTimeout(function(){ typeAi(c.ai); }, 700);
+    }
+    function countUp(id, from, to, fmt){
+      var el=document.getElementById(id); if(!el) return; var steps=28, n=0;
+      var t=setInterval(function(){ n++; var v=from+(to-from)*(n/steps); el.textContent=fmt(v); if(n>=steps){ el.textContent=fmt(to); clearInterval(t); } }, 22);
+      countTimers.push(t);
+    }
+    function typeAi(text){
+      var el=document.getElementById('aiText'), cur=document.getElementById('aiCursor'); if(!el) return; var i=0;
+      aiTimer=setInterval(function(){ el.textContent=text.slice(0,i); i++; if(i>text.length){ clearInterval(aiTimer); if(cur) cur.style.display='none'; } }, 14);
+    }
+  </script>
 </body>
 </html>
