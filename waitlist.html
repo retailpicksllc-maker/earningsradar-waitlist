@@ -252,6 +252,91 @@
       color: #444;
       margin-top: 24px;
     }
+
+    /* ===== Referral loop ===== */
+    .position {
+      margin: 4px 0 2px;
+    }
+    .pos-num {
+      font-size: 44px;
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(135deg, #8b36ff, #cc88ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .pos-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 4px;
+    }
+    .move-up {
+      color: #aaa;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 8px 4px 4px;
+    }
+    .move-up b { color: #b57bff; }
+
+    .ref-box {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .ref-box input {
+      flex: 1;
+      font-size: 13px;
+      padding: 12px 14px;
+      color: #cbb4ff;
+    }
+    .copy-btn {
+      background: rgba(139,54,255,0.18);
+      border: 1px solid rgba(139,54,255,0.5);
+      color: #cbb4ff;
+      border-radius: 12px;
+      padding: 0 18px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: rgba(139,54,255,0.3); }
+
+    .share-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 4px;
+    }
+    .share-btn {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      padding: 12px 6px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      transition: transform 0.15s, background 0.15s;
+    }
+    .share-btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.12); }
+    .share-btn.x:hover  { background: #1d1d1d; border-color:#333; }
+    .share-btn.wa:hover { background: #14603f; border-color:#1f7a52; }
+
+    .ref-count {
+      font-size: 13px;
+      color: #777;
+      margin-top: 6px;
+    }
+    .ref-count span { color: #b57bff; font-weight: 800; }
   </style>
 </head>
 <body>
@@ -295,7 +380,26 @@
     <div class="card success" id="success-card">
       <div class="success-icon">🎉</div>
       <h2>You're on the list!</h2>
-      <p>We'll notify you the moment Earnings Radar drops.<br/>Stay ahead of every move.</p>
+
+      <div class="position" id="position-wrap" style="display:none;">
+        <div class="pos-num" id="pos-num">#—</div>
+        <div class="pos-label">your spot in line</div>
+      </div>
+
+      <p class="move-up">Jump the line — every friend who joins from your link bumps you up <b>10 spots</b> and gets you earlier access.</p>
+
+      <div class="ref-box">
+        <input type="text" id="ref-link" readonly value="" />
+        <button class="copy-btn" id="copy-btn" onclick="copyLink()">Copy</button>
+      </div>
+
+      <div class="share-row">
+        <a class="share-btn x"  id="share-x"  target="_blank" rel="noopener">Share on X</a>
+        <a class="share-btn sms" id="share-sms">Text a friend</a>
+        <a class="share-btn wa" id="share-wa" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+
+      <div class="ref-count"><span id="ref-count">0</span> friends joined from your link</div>
     </div>
 
     <div class="stats">
@@ -317,6 +421,20 @@
   </div>
 
   <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOn3ve8OVs-JSXE4PvIKQUw0Pqg8Blgo6eIab99cqfJUOnLxB3LpNYxWsumdZo-1M1/exec';
+
+    // Who referred this visitor? (?ref=CODE in the URL)
+    const REFERRED_BY = (new URLSearchParams(location.search).get('ref') || '').slice(0, 20);
+
+    // This visitor's own share code — generated up front so their link works
+    // even if we can't read the server response.
+    const MY_CODE = 'er' + Math.random().toString(36).slice(2, 8) +
+                    Math.random().toString(36).slice(2, 4);
+
+    function myShareLink() {
+      return location.origin + location.pathname + '?ref=' + MY_CODE;
+    }
+
     async function handleSubmit() {
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
@@ -340,21 +458,68 @@
       btn.disabled = true;
 
       try {
-        await fetch('https://script.google.com/macros/s/AKfycbwOn3ve8OVs-JSXE4PvIKQUw0Pqg8Blgo6eIab99cqfJUOnLxB3LpNYxWsumdZo-1M1/exec', {
+        // Write the signup (opaque no-cors — always succeeds, saves even on old backend)
+        await fetch(SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone, source, company })
+          body: JSON.stringify({ name, email, phone, source, company, code: MY_CODE, ref: REFERRED_BY })
         });
 
-        // no-cors returns opaque response — if fetch didn't throw, it went through
-        document.getElementById('form-card').style.display = 'none';
-        document.getElementById('success-card').style.display = 'flex';
+        showSuccess();
+        fetchPosition(); // best-effort: fill in their spot in line + referral count
 
       } catch (err) {
         btn.textContent = 'Join the Waitlist 📡';
         btn.disabled = false;
         alert('Something went wrong. Please try again.');
+      }
+    }
+
+    function showSuccess() {
+      document.getElementById('form-card').style.display = 'none';
+      document.getElementById('success-card').style.display = 'flex';
+
+      const link = myShareLink();
+      document.getElementById('ref-link').value = link;
+
+      const msg = 'I just joined the Earnings Radar waitlist — real-time alerts before stocks report earnings. Grab early access:';
+      document.getElementById('share-x').href   = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(msg) + '&url=' + encodeURIComponent(link);
+      document.getElementById('share-wa').href  = 'https://wa.me/?text=' + encodeURIComponent(msg + ' ' + link);
+      document.getElementById('share-sms').href = 'sms:?&body=' + encodeURIComponent(msg + ' ' + link);
+    }
+
+    // Ask the backend for this person's position + referral count.
+    // Degrades gracefully: if the (old) backend can't answer, we just hide the number.
+    async function fetchPosition() {
+      try {
+        const res = await fetch(SCRIPT_URL + '?code=' + encodeURIComponent(MY_CODE), { method: 'GET' });
+        const data = await res.json();
+        if (data && typeof data.position !== 'undefined') {
+          document.getElementById('pos-num').textContent = '#' + Number(data.position).toLocaleString();
+          document.getElementById('position-wrap').style.display = 'block';
+        }
+        if (data && typeof data.referrals !== 'undefined') {
+          document.getElementById('ref-count').textContent = Number(data.referrals).toLocaleString();
+        }
+      } catch (e) {
+        // Old backend / no JSON — leave the spot-in-line hidden, share link still works.
+      }
+    }
+
+    function copyLink() {
+      const input = document.getElementById('ref-link');
+      input.select();
+      input.setSelectionRange(0, 99999);
+      const done = () => {
+        const b = document.getElementById('copy-btn');
+        b.textContent = 'Copied!';
+        setTimeout(() => { b.textContent = 'Copy'; }, 1800);
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).then(done, () => { document.execCommand('copy'); done(); });
+      } else {
+        document.execCommand('copy'); done();
       }
     }
   </script>
