@@ -208,7 +208,10 @@ window.openAuth = (m) => { if (m) setMode(m); open(); };
 // Auto-open the sign-in / create-account popup ~5s after landing on the calendar
 // home page — only when signed out, and once per browser session so it isn't nagging.
 (function autoPrompt(){
-  const isHome = location.pathname.endsWith("/") || /\/index\.html$/.test(location.pathname);
+  // Fire on the home page OR on the calendar app itself (served at /app.html — detected by #calGrid),
+  // so moving/renaming the calendar page never silently disables the prompt.
+  const isCalendar = !!document.getElementById("calGrid");
+  const isHome = isCalendar || location.pathname.endsWith("/") || /\/(index|app|app_slim)\.html$/.test(location.pathname);
   if (!isHome) return;
   try { if (sessionStorage.getItem("er_auth_prompted")) return; } catch (e) {}
   setTimeout(() => {
