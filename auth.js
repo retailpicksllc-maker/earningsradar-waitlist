@@ -5,7 +5,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail,
-  sendEmailVerification
+  sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
+  reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Same Firebase project as the iOS app.
@@ -68,7 +69,14 @@ const css = `
 .erAuth .pwwrap input{padding-right:66px}
 .erAuth .pwtoggle{position:absolute;right:7px;top:7px;bottom:19px;padding:0 11px;border:1px solid rgba(255,255,255,.12);
   border-radius:8px;background:rgba(255,255,255,.06);color:#9AA4C2;font-weight:800;font-size:11.5px;cursor:pointer;letter-spacing:.4px}
-.erAuth .pwtoggle:hover{color:#ECECF1;border-color:#2F6BFF}`;
+.erAuth .pwtoggle:hover{color:#ECECF1;border-color:#2F6BFF}
+.erAuth .dellink{background:none;border:none;color:#F87171;opacity:.75;font-weight:700;font-size:12.5px;cursor:pointer;margin-top:16px;text-decoration:underline}
+.erAuth .dellink:hover{opacity:1}
+.erAuth .delbox{margin-top:14px;padding:14px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.07);border-radius:12px;font-size:13px;text-align:left;line-height:1.5}
+.erAuth .delbox b{color:#F87171}
+.erAuth .delbox p{color:#9AA4C2;font-size:12.5px;margin:6px 0 10px}
+.erAuth .delbox input{margin-bottom:0}
+.erAuth .delconfirm{background:linear-gradient(135deg,#F87171,#DC2626)!important;border:none!important;color:#fff!important}`;
 const style = document.createElement("style"); style.textContent = css; document.head.appendChild(style);
 
 /* ---------- markup ---------- */
@@ -124,6 +132,19 @@ root.innerHTML = `
         <div class="row">
           <a class="primary" href="index.html" style="text-align:center;text-decoration:none;display:block">Open the calendar →</a>
           <button class="ghost" data-signout type="button">Sign out</button>
+        </div>
+        <button class="dellink" data-delopen type="button">Delete account</button>
+        <div class="delbox" data-delbox style="display:none">
+          <b>Delete your account permanently?</b>
+          <p>Your account and synced watchlist access will be removed. This cannot be undone.</p>
+          <div data-delpw-wrap>
+            <input type="password" data-delpw placeholder="Retype your password to confirm" autocomplete="current-password" />
+          </div>
+          <div class="vrow">
+            <button type="button" data-delcancel>Cancel</button>
+            <button type="button" class="delconfirm" data-delconfirm>Delete forever</button>
+          </div>
+          <div class="vmsg" data-delmsg></div>
         </div>
       </div>
     </div>
@@ -223,6 +244,45 @@ q("[data-forgot]").onclick = async () => {
 
 q("[data-signout]").onclick = () => signOut(auth);
 
+/* account deletion — requires re-entering the password (or a Google re-auth popup) first */
+q("[data-delopen]").onclick = () => {
+  q("[data-delbox]").style.display = "block";
+  q("[data-delopen]").style.display = "none";
+  const isPw = auth.currentUser && auth.currentUser.providerData.some((p) => p.providerId === "password");
+  q("[data-delpw-wrap]").style.display = isPw ? "block" : "none";
+  q("[data-delpw]").value = ""; q("[data-delmsg]").textContent = "";
+};
+q("[data-delcancel]").onclick = () => {
+  q("[data-delbox]").style.display = "none";
+  q("[data-delopen]").style.display = "";
+};
+q("[data-delconfirm]").onclick = async () => {
+  const user = auth.currentUser; if (!user) return;
+  const m = q("[data-delmsg]"); m.style.color = "#F87171"; m.textContent = "";
+  const btn = q("[data-delconfirm]"); btn.disabled = true;
+  try {
+    // Fresh re-authentication is REQUIRED before deletion: password accounts must retype their
+    // password; Google accounts confirm through a Google popup (they have no password).
+    const isPw = user.providerData.some((p) => p.providerId === "password");
+    if (isPw) {
+      const pw = q("[data-delpw]").value;
+      if (!pw) { m.textContent = "Enter your password to confirm."; btn.disabled = false; return; }
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pw));
+    } else {
+      await reauthenticateWithPopup(user, new GoogleAuthProvider());
+    }
+    await deleteUser(user);
+    _pendingMsg = { cls: "msg ok", text: "Your account has been deleted." };
+  } catch (err) {
+    const c = err && err.code;
+    m.textContent = c === "auth/invalid-credential" || c === "auth/wrong-password" ? "Wrong password."
+      : c === "auth/too-many-requests" ? "Too many attempts — try again in a few minutes."
+      : c === "auth/popup-closed-by-user" ? "Confirmation was cancelled."
+      : "Couldn't delete the account (" + (c || "error") + ").";
+  }
+  btn.disabled = false;
+};
+
 /* show/hide password */
 q("[data-pwtoggle]").onclick = () => {
   const inp = q("[data-password]");
@@ -266,6 +326,7 @@ onAuthStateChanged(auth, (user) => {
     const needsVerify = !user.emailVerified && user.providerData.some((p) => p.providerId === "password");
     q("[data-vnote]").style.display = needsVerify ? "block" : "none";
     if (needsVerify) { q("[data-vemail]").textContent = user.email; q("[data-vmsg]").textContent = ""; }
+    q("[data-delbox]").style.display = "none"; q("[data-delopen]").style.display = "";
   } else {
     q('[data-view="form"]').style.display = "block";
     q('[data-view="acct"]').style.display = "none";
