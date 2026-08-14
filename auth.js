@@ -63,7 +63,12 @@ const css = `
 .erAuth .vrow button{flex:1;padding:8px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:rgba(255,255,255,.06);
   color:#ECECF1;font-weight:800;font-size:12.5px;cursor:pointer}
 .erAuth .vrow button:hover{border-color:#FBBF24}
-.erAuth .vmsg{font-size:12px;font-weight:700;color:#34D399;min-height:14px;margin-top:6px}`;
+.erAuth .vmsg{font-size:12px;font-weight:700;color:#34D399;min-height:14px;margin-top:6px}
+.erAuth .pwwrap{position:relative}
+.erAuth .pwwrap input{padding-right:66px}
+.erAuth .pwtoggle{position:absolute;right:7px;top:7px;bottom:19px;padding:0 11px;border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;background:rgba(255,255,255,.06);color:#9AA4C2;font-weight:800;font-size:11.5px;cursor:pointer;letter-spacing:.4px}
+.erAuth .pwtoggle:hover{color:#ECECF1;border-color:#2F6BFF}`;
 const style = document.createElement("style"); style.textContent = css; document.head.appendChild(style);
 
 /* ---------- markup ---------- */
@@ -87,7 +92,10 @@ root.innerHTML = `
         <label>Email</label>
         <input type="email" data-email autocomplete="email" placeholder="you@example.com" required />
         <label>Password</label>
-        <input type="password" data-password autocomplete="current-password" placeholder="••••••••" required />
+        <div class="pwwrap">
+          <input type="password" data-password autocomplete="current-password" placeholder="••••••••" required />
+          <button type="button" class="pwtoggle" data-pwtoggle aria-label="Show password">Show</button>
+        </div>
         <button class="primary" type="submit" data-submit>Sign in</button>
         <div class="msg" data-msg></div>
         <span class="forgot" data-forgot>Forgot password?</span>
@@ -127,7 +135,9 @@ const q = (s) => root.querySelector(s);
 let mode = "signin";
 
 function open(){ root.classList.add("on"); }
-function close(){ root.classList.remove("on"); q("[data-msg]").textContent=""; }
+function close(){ root.classList.remove("on"); q("[data-msg]").textContent="";
+  // always re-mask the password when the modal closes
+  const pw=q("[data-password]"); if(pw){ pw.type="password"; } const tg=q("[data-pwtoggle]"); if(tg){ tg.textContent="Show"; } }
 function setMode(m){
   mode = m;
   q('[data-tab="signin"]').classList.toggle("active", m==="signin");
@@ -191,6 +201,16 @@ q("[data-forgot]").onclick = async () => {
 };
 
 q("[data-signout]").onclick = () => signOut(auth);
+
+/* show/hide password */
+q("[data-pwtoggle]").onclick = () => {
+  const inp = q("[data-password]");
+  const show = inp.type === "password";
+  inp.type = show ? "text" : "password";
+  q("[data-pwtoggle]").textContent = show ? "Hide" : "Show";
+  q("[data-pwtoggle]").setAttribute("aria-label", show ? "Hide password" : "Show password");
+  inp.focus();
+};
 
 /* email-verification actions */
 q("[data-resend]").onclick = async () => {
