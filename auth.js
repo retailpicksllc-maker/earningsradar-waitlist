@@ -4,7 +4,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail
+  signOut, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail,
+  sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Same Firebase project as the iOS app.
@@ -54,7 +55,15 @@ const css = `
 .erAuth .acct .em{color:#9AA4C2;font-size:14px;margin-top:2px}
 .erAuth .acct .row{display:grid;gap:10px;margin-top:20px}
 .erAuth .ghost{width:100%;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.05);
-  color:#ECECF1;font-weight:800;font-size:15px;cursor:pointer}`;
+  color:#ECECF1;font-weight:800;font-size:15px;cursor:pointer}
+.erAuth .vnote{margin:14px 0 4px;padding:12px 14px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);
+  border-radius:12px;font-size:13px;color:#ECECF1;text-align:left;line-height:1.5}
+.erAuth .vnote b{color:#FBBF24}
+.erAuth .vrow{display:flex;gap:8px;margin-top:9px}
+.erAuth .vrow button{flex:1;padding:8px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:rgba(255,255,255,.06);
+  color:#ECECF1;font-weight:800;font-size:12.5px;cursor:pointer}
+.erAuth .vrow button:hover{border-color:#FBBF24}
+.erAuth .vmsg{font-size:12px;font-weight:700;color:#34D399;min-height:14px;margin-top:6px}`;
 const style = document.createElement("style"); style.textContent = css; document.head.appendChild(style);
 
 /* ---------- markup ---------- */
@@ -96,6 +105,14 @@ root.innerHTML = `
         <div class="av" data-avatar>A</div>
         <h3 data-accname>Hi</h3>
         <div class="em" data-accemail></div>
+        <div class="vnote" data-vnote style="display:none">
+          <b>Verify your email.</b> We sent a link to <span data-vemail></span> — click it to confirm your account.
+          <div class="vrow">
+            <button type="button" data-resend>Resend email</button>
+            <button type="button" data-vcheck>I've verified</button>
+          </div>
+          <div class="vmsg" data-vmsg></div>
+        </div>
         <div class="row">
           <a class="primary" href="index.html" style="text-align:center;text-decoration:none;display:block">Open the calendar →</a>
           <button class="ghost" data-signout type="button">Sign out</button>
@@ -150,6 +167,9 @@ q("[data-form]").addEventListener("submit", async (e) => {
       const cred = await createUserWithEmailAndPassword(auth, email, pw);
       const nm = q("[data-name]").value.trim();
       if (nm) await updateProfile(cred.user, { displayName: nm });
+      // Email verification: fire the link immediately on signup. Non-fatal — the account view
+      // shows a "verify your email" notice with a resend button until the link is clicked.
+      try { await sendEmailVerification(cred.user); } catch (e) {}
     } else {
       await signInWithEmailAndPassword(auth, email, pw);
     }
@@ -172,6 +192,21 @@ q("[data-forgot]").onclick = async () => {
 
 q("[data-signout]").onclick = () => signOut(auth);
 
+/* email-verification actions */
+q("[data-resend]").onclick = async () => {
+  const m = q("[data-vmsg]");
+  try { await sendEmailVerification(auth.currentUser); m.style.color = "#34D399"; m.textContent = "Verification email sent — check your inbox (and spam)."; }
+  catch (e) { m.style.color = "#F87171"; m.textContent = (e && e.code === "auth/too-many-requests") ? "Too many requests — try again in a few minutes." : "Couldn't send just now — try again shortly."; }
+};
+q("[data-vcheck]").onclick = async () => {
+  const m = q("[data-vmsg]");
+  try {
+    await auth.currentUser.reload();
+    if (auth.currentUser.emailVerified) { q("[data-vnote]").style.display = "none"; }
+    else { m.style.color = "#F87171"; m.textContent = "Not verified yet — click the link in the email first."; }
+  } catch (e) {}
+};
+
 /* auth state → swap modal view + update the nav trigger label */
 onAuthStateChanged(auth, (user) => {
   const trigger = document.getElementById("authTrigger");
@@ -185,6 +220,11 @@ onAuthStateChanged(auth, (user) => {
     q("[data-accemail]").textContent = user.email;
     q("[data-avatar]").textContent = (nm[0] || "A").toUpperCase();
     if (trigger) trigger.textContent = nm;
+    // Verification notice: only for email/password accounts that haven't clicked the link yet.
+    // Google sign-ins arrive pre-verified, so they never see this.
+    const needsVerify = !user.emailVerified && user.providerData.some((p) => p.providerId === "password");
+    q("[data-vnote]").style.display = needsVerify ? "block" : "none";
+    if (needsVerify) { q("[data-vemail]").textContent = user.email; q("[data-vmsg]").textContent = ""; }
   } else {
     q('[data-view="form"]').style.display = "block";
     q('[data-view="acct"]').style.display = "none";
