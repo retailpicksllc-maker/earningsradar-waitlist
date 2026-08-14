@@ -158,8 +158,12 @@ let mode = "signin";
 // re-renders the form and would otherwise wipe the explanation).
 let _pendingMsg = null;
 
-function open(){ root.classList.add("on"); }
-function close(){ root.classList.remove("on"); q("[data-msg]").textContent="";
+// Gate mode: when the auto-prompt opens for a signed-out visitor, the modal is MANDATORY —
+// no close button, no backdrop dismiss. It unlocks (and closes) only on successful sign-in.
+let _gated = false;
+function open(){ root.classList.add("on"); const x=q("[data-close]"); if(x) x.style.display=_gated?"none":""; }
+function close(){ if(_gated && !auth.currentUser) return;   // locked until signed in
+  root.classList.remove("on"); q("[data-msg]").textContent="";
   // always re-mask the password when the modal closes
   const pw=q("[data-password]"); if(pw){ pw.type="password"; } const tg=q("[data-pwtoggle]"); if(tg){ tg.textContent="Show"; } }
 function setMode(m){
@@ -327,6 +331,8 @@ onAuthStateChanged(auth, (user) => {
     q("[data-vnote]").style.display = needsVerify ? "block" : "none";
     if (needsVerify) { q("[data-vemail]").textContent = user.email; q("[data-vmsg]").textContent = ""; }
     q("[data-delbox]").style.display = "none"; q("[data-delopen]").style.display = "";
+    // Signed in: release the gate. If the mandatory prompt was up, close it so they land in the calendar.
+    if (_gated) { _gated = false; const x=q("[data-close]"); if(x) x.style.display=""; if (root.classList.contains("on")) close(); }
   } else {
     q('[data-view="form"]').style.display = "block";
     q('[data-view="acct"]').style.display = "none";
@@ -361,6 +367,7 @@ window.openAuth = (m) => { if (m) setMode(m); open(); };
     if (root.classList.contains("on")) return;   // already open
     if (auth.currentUser) return;                 // already signed in
     try { sessionStorage.setItem("er_auth_prompted", "1"); } catch (e) {}
+    _gated = true;                                // MANDATORY: can't be dismissed until signed in
     setMode("signin");
     open();
   }, 5000);
