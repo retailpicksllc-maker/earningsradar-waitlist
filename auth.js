@@ -133,6 +133,9 @@ if (document.body) document.body.appendChild(root);
 
 const q = (s) => root.querySelector(s);
 let mode = "signin";
+// Message to show after an auth-state reset (signup/blocked-signin sign the user out, which
+// re-renders the form and would otherwise wipe the explanation).
+let _pendingMsg = null;
 
 function open(){ root.classList.add("on"); }
 function close(){ root.classList.remove("on"); q("[data-msg]").textContent="";
@@ -177,11 +180,23 @@ q("[data-form]").addEventListener("submit", async (e) => {
       const cred = await createUserWithEmailAndPassword(auth, email, pw);
       const nm = q("[data-name]").value.trim();
       if (nm) await updateProfile(cred.user, { displayName: nm });
-      // Email verification: fire the link immediately on signup. Non-fatal — the account view
-      // shows a "verify your email" notice with a resend button until the link is clicked.
+      // HARD verification: send the link, then sign the user straight back out. The account can't
+      // be used until the emailed link is clicked and they sign in again.
       try { await sendEmailVerification(cred.user); } catch (e) {}
+      _pendingMsg = { cls: "msg ok", text: "Account created! We sent a verification link to " + email + " — click it, then sign in." };
+      await signOut(auth);
     } else {
-      await signInWithEmailAndPassword(auth, email, pw);
+      const cred = await signInWithEmailAndPassword(auth, email, pw);
+      const isPw = cred.user.providerData.some((p) => p.providerId === "password");
+      if (isPw && !cred.user.emailVerified) {
+        // Unverified accounts may not sign in. Send a fresh link (best effort) and bounce them.
+        let sent = true;
+        try { await sendEmailVerification(cred.user); } catch (e) { sent = false; }
+        _pendingMsg = { cls: "msg err", text: sent
+          ? "Your email isn't verified yet. We just sent a new link to " + email + " — click it, then sign in."
+          : "Your email isn't verified yet. Check your inbox (and spam) for the earlier link, then sign in." };
+        await signOut(auth);
+      }
     }
   } catch (err) { showError(err); }
   finally { q("[data-submit]").disabled = false; }
@@ -250,6 +265,7 @@ onAuthStateChanged(auth, (user) => {
     q('[data-view="acct"]').style.display = "none";
     setMode("signin");
     if (trigger) trigger.textContent = "Sign in";
+    if (_pendingMsg) { const m = q("[data-msg]"); m.className = _pendingMsg.cls; m.textContent = _pendingMsg.text; _pendingMsg = null; }
   }
 });
 
