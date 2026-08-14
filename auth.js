@@ -181,9 +181,15 @@ q("[data-form]").addEventListener("submit", async (e) => {
       const nm = q("[data-name]").value.trim();
       if (nm) await updateProfile(cred.user, { displayName: nm });
       // HARD verification: send the link, then sign the user straight back out. The account can't
-      // be used until the emailed link is clicked and they sign in again.
-      try { await sendEmailVerification(cred.user); } catch (e) {}
-      _pendingMsg = { cls: "msg ok", text: "Account created! We sent a verification link to " + email + " — click it, then sign in." };
+      // be used until the emailed link is clicked and they sign in again. Surface send failures
+      // honestly (Firebase rate-limits verification emails after repeated attempts).
+      let vErr = null;
+      try { await sendEmailVerification(cred.user); } catch (e) { vErr = e; }
+      _pendingMsg = vErr
+        ? { cls: "msg err", text: (vErr.code === "auth/too-many-requests")
+            ? "Account created, but we couldn't email the link yet (too many attempts — Firebase rate limit). Wait ~1 hour, then sign in and we'll resend it."
+            : "Account created, but the verification email failed to send (" + (vErr.code || "error") + "). Sign in later and we'll resend it." }
+        : { cls: "msg ok", text: "Account created! We sent a verification link to " + email + " — click it, then sign in." };
       await signOut(auth);
     } else {
       const cred = await signInWithEmailAndPassword(auth, email, pw);
