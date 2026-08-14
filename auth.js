@@ -203,6 +203,7 @@ q("[data-form]").addEventListener("submit", async (e) => {
   try {
     if (mode === "signup") {
       const cred = await createUserWithEmailAndPassword(auth, email, pw);
+      try { window.erTrack && window.erTrack("sign_up", { method: "password" }); } catch (e) {}
       const nm = q("[data-name]").value.trim();
       if (nm) await updateProfile(cred.user, { displayName: nm });
       // HARD verification: send the link, then sign the user straight back out. The account can't
@@ -218,6 +219,7 @@ q("[data-form]").addEventListener("submit", async (e) => {
       await signOut(auth);
     } else {
       const cred = await signInWithEmailAndPassword(auth, email, pw);
+      try { window.erTrack && window.erTrack("login", { method: "password" }); } catch (e) {}
       const isPw = cred.user.providerData.some((p) => p.providerId === "password");
       if (isPw && !cred.user.emailVerified) {
         // Unverified accounts may not sign in. Send a fresh link (best effort) and bounce them.
@@ -234,7 +236,11 @@ q("[data-form]").addEventListener("submit", async (e) => {
 });
 
 q("[data-google]").onclick = async () => {
-  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  try {
+    const res = await signInWithPopup(auth, new GoogleAuthProvider());
+    const isNew = res && res.user && res.user.metadata && res.user.metadata.creationTime === res.user.metadata.lastSignInTime;
+    try { window.erTrack && window.erTrack(isNew ? "sign_up" : "login", { method: "google" }); } catch (e) {}
+  }
   catch (err) { showError(err); }
 };
 
