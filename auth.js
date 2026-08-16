@@ -8,6 +8,8 @@ import {
   sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
   reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Same Firebase project as the iOS app.
 // NOTE: add your Web app's appId from Firebase Console → Project settings → Your apps → Web.
@@ -18,7 +20,24 @@ const firebaseConfig = {
   projectId: "earnings-radar-f398e",
   appId: "1:621874989792:web:348614b693e5d261b45e85"
 };
-const auth = getAuth(initializeApp(firebaseConfig));
+const _fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(_fbApp);
+const _fs = getFirestore(_fbApp);
+
+/* Mirror each signed-in user into Firestore /users/{uid} — gives us our own browsable/exportable
+   account list (email, name, provider, signup date, last seen). Rules allow each user to write
+   only their own doc; no public reads. Best-effort: a Firestore hiccup must never break auth. */
+function _mirrorUser(user) {
+  try {
+    setDoc(doc(_fs, "users", user.uid), {
+      email: user.email || null,
+      name: user.displayName || null,
+      provider: (user.providerData[0] || {}).providerId || null,
+      createdAt: user.metadata && user.metadata.creationTime || null,
+      lastSeen: serverTimestamp()
+    }, { merge: true }).catch(() => {});
+  } catch (e) {}
+}
 
 /* ---------- styles (scoped, self-contained) ---------- */
 const css = `
@@ -281,6 +300,8 @@ q("[data-delconfirm]").onclick = async () => {
     } else {
       await reauthenticateWithPopup(user, new GoogleAuthProvider());
     }
+    // Remove the Firestore mirror BEFORE deleting auth (rules require the user's own uid).
+    try { await deleteDoc(doc(_fs, "users", user.uid)); } catch (e) {}
     await deleteUser(user);
     _pendingMsg = { cls: "msg ok", text: "Your account has been deleted." };
   } catch (err) {
@@ -324,6 +345,7 @@ onAuthStateChanged(auth, (user) => {
   // Hide "Create account" / sign-in CTAs across the page when signed in.
   document.querySelectorAll("[data-auth-open]").forEach((el) => { el.style.display = user ? "none" : ""; });
   if (user) {
+    _mirrorUser(user);
     const nm = user.displayName || user.email.split("@")[0];
     q('[data-view="form"]').style.display = "none";
     q('[data-view="acct"]').style.display = "block";
