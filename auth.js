@@ -8,7 +8,7 @@ import {
   sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
   reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp }
+import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, increment }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Same Firebase project as the iOS app.
@@ -34,10 +34,32 @@ function _mirrorUser(user) {
       name: user.displayName || null,
       provider: (user.providerData[0] || {}).providerId || null,
       createdAt: user.metadata && user.metadata.creationTime || null,
-      lastSeen: serverTimestamp()
+      lastSeen: serverTimestamp(),
+      visits: increment(1)
     }, { merge: true }).catch(() => {});
   } catch (e) {}
 }
+
+/* Per-account time-on-site. Counts seconds only while the tab is VISIBLE, accumulates locally,
+   and flushes to the user's doc as an increment every 2 min + whenever the tab is hidden/closed.
+   Keeps Firestore writes tiny (~1/2min per active signed-in user) and never blocks the page. */
+let _tActive = null, _tAccum = 0;
+function _tStart() { if (_tActive == null && !document.hidden) _tActive = Date.now(); }
+function _tPause() { if (_tActive != null) { _tAccum += (Date.now() - _tActive) / 1000; _tActive = null; } }
+function _tFlush() {
+  _tPause(); _tStart();
+  const s = Math.round(_tAccum);
+  if (!auth.currentUser || s < 5) return;
+  _tAccum = 0;
+  try {
+    setDoc(doc(_fs, "users", auth.currentUser.uid),
+      { totalSeconds: increment(s), lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
+  } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) { _tFlush(); } else { _tStart(); } });
+window.addEventListener("pagehide", _tFlush);
+setInterval(_tFlush, 120000);
+_tStart();
 
 /* ---------- styles (scoped, self-contained) ---------- */
 const css = `
