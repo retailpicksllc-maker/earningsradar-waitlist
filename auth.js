@@ -8,7 +8,7 @@ import {
   sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
   reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, increment }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, serverTimestamp, increment, arrayUnion, arrayRemove }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Same Firebase project as the iOS app.
@@ -23,6 +23,44 @@ const firebaseConfig = {
 const _fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(_fbApp);
 const _fs = getFirestore(_fbApp);
+
+/* ---------- Watchlist (window.erWatch) ----------
+   Works signed-out via localStorage; signed-in it syncs to /users/{uid}.watchlist in Firestore.
+   On sign-in the local and remote lists MERGE (union) so nothing a visitor starred is lost. */
+let _wl = new Set();
+try { _wl = new Set(JSON.parse(localStorage.getItem("er_watchlist") || "[]")); } catch (e) {}
+const _wlCbs = [];
+function _wlSave() {
+  try { localStorage.setItem("er_watchlist", JSON.stringify([..._wl])); } catch (e) {}
+  _wlCbs.forEach((f) => { try { f([..._wl]); } catch (e) {} });
+}
+window.erWatch = {
+  list: () => [..._wl],
+  has: (s) => _wl.has(String(s || "").toUpperCase()),
+  signedIn: () => !!auth.currentUser,
+  promptSignIn: () => { const t = document.getElementById("authTrigger"); if (t) t.click(); },
+  toggle(s) {
+    s = String(s || "").toUpperCase(); if (!s) return false;
+    const on = !_wl.has(s); if (on) _wl.add(s); else _wl.delete(s);
+    _wlSave();
+    const u = auth.currentUser;
+    if (u) setDoc(doc(_fs, "users", u.uid),
+      { watchlist: on ? arrayUnion(s) : arrayRemove(s) }, { merge: true }).catch(() => {});
+    return on;
+  },
+  onChange(f) { _wlCbs.push(f); },
+};
+async function _wlSync(user) {
+  try {
+    const snap = await getDoc(doc(_fs, "users", user.uid));
+    const remote = (snap.exists() && Array.isArray(snap.data().watchlist)) ? snap.data().watchlist : [];
+    const localOnly = [..._wl].filter((s) => !remote.includes(s));
+    remote.forEach((s) => _wl.add(String(s).toUpperCase()));
+    if (localOnly.length)
+      await setDoc(doc(_fs, "users", user.uid), { watchlist: arrayUnion(...localOnly) }, { merge: true });
+    _wlSave();
+  } catch (e) { /* offline: local list still works */ }
+}
 
 /* Mirror each signed-in user into Firestore /users/{uid} — gives us our own browsable/exportable
    account list (email, name, provider, signup date, last seen). Rules allow each user to write
@@ -368,6 +406,7 @@ onAuthStateChanged(auth, (user) => {
   document.querySelectorAll("[data-auth-open]").forEach((el) => { el.style.display = user ? "none" : ""; });
   if (user) {
     _mirrorUser(user);
+    _wlSync(user);
     const nm = user.displayName || user.email.split("@")[0];
     q('[data-view="form"]').style.display = "none";
     q('[data-view="acct"]').style.display = "block";
