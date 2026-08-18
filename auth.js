@@ -72,6 +72,10 @@ function _mirrorUser(user) {
       name: user.displayName || null,
       provider: (user.providerData[0] || {}).providerId || null,
       createdAt: user.metadata && user.metadata.creationTime || null,
+      // Same signup moment as a real Timestamp: the console renders it in local time with the
+      // hour/minute (createdAt above is a GMT *string*, which is unreadable at a glance).
+      createdAtTs: (user.metadata && user.metadata.creationTime)
+        ? new Date(user.metadata.creationTime) : null,
       lastSeen: serverTimestamp(),
       visits: increment(1)
     }, { merge: true }).catch(() => {});
