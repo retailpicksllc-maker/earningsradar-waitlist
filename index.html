@@ -1010,6 +1010,7 @@ function loadDetChart(sym){
   loadBars(sym, open?'1D':'1M');
 }
 function openDetail(sym,date){
+  if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
   erTrack('ticker_click',{ticker:sym});
   const rowObj=(DATA.find(r=>r.symbol===sym&&r.date===date)||{}).row||{};
   const name=rowObj.name||(META[sym]&&META[sym].name)||sym;
@@ -1263,7 +1264,9 @@ function loadInsight(sym,rep){
   _INSP=_INSP||fetch('insights.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
   _INSP.then(j=>{_INS=j||{};paint();});
 }
-function closeDetail(){clearInterval(window._detTimer);$('#overlay').classList.remove('on');}
+function _closeDetailNow(){clearInterval(window._detTimer);$('#overlay').classList.remove('on');}
+function closeDetail(){ if(history.state&&history.state.v==='det'){ history.back(); } else { _closeDetailNow(); } }
+function _pushDay(d){ if(!window._fromPop){ try{ history.pushState({v:'day',d:d},'','#day-'+d); }catch(e){} } }
 $('#overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeDetail();});
 $('#calGrid').addEventListener('click',e=>{
   // Bell = watch/unwatch (before the row-open handler so tapping the bell doesn't open the popup)
@@ -1278,12 +1281,12 @@ $('#calGrid').addEventListener('click',e=>{
     }
     return;
   }
-  if(e.target.closest('.dayback')){ dayView=null; renderCalendar(); return; }
-  const mb=e.target.closest('.morebox'); if(mb){ const dc=mb.closest('.daycol'); if(dc&&dc.getAttribute('data-day')){ dayView=dc.getAttribute('data-day'); renderCalendar(); } return; }
+  if(e.target.closest('.dayback')){ if(history.state&&history.state.v==='day'){ history.back(); } else { dayView=null; renderCalendar(); } return; }
+  const mb=e.target.closest('.morebox'); if(mb){ const dc=mb.closest('.daycol'); if(dc&&dc.getAttribute('data-day')){ dayView=dc.getAttribute('data-day'); _pushDay(dayView); renderCalendar(); } return; }
   const lm=e.target.closest('.lmore'); if(lm){ const s=lm.closest('.lsess'); if(s)s.querySelectorAll('.lhide').forEach(x=>x.classList.remove('lhide')); lm.remove(); return; }
   const w=e.target.closest('[data-sym][data-date]'); if(w){ openDetail(w.getAttribute('data-sym'),w.getAttribute('data-date')); return; }
-  const dh=e.target.closest('.dayhead[data-day]'); if(dh){ dayView=dh.getAttribute('data-day'); erTrack('day_view',{day:dayView}); renderCalendar(); return; }
-  const mc=e.target.closest('.mcell[data-day]'); if(mc){ dayView=mc.getAttribute('data-day'); erTrack('day_view',{day:dayView}); renderCalendar(); return; }
+  const dh=e.target.closest('.dayhead[data-day]'); if(dh){ dayView=dh.getAttribute('data-day'); _pushDay(dayView); erTrack('day_view',{day:dayView}); renderCalendar(); return; }
+  const mc=e.target.closest('.mcell[data-day]'); if(mc){ dayView=mc.getAttribute('data-day'); _pushDay(dayView); erTrack('day_view',{day:dayView}); renderCalendar(); return; }
 });
 
 $('#prevWk').onclick=()=>{ dayView=null; if(calView==='month') monthOffset--; else weekOffset--; renderCalendar(); };
@@ -1342,6 +1345,23 @@ $('#calNote').textContent = 'Live earnings · updated '+BUILT_AT;
   weekOffset=Math.max(0, Math.round((tMon-thisMon)/(7*24*3600*1000)));
 })();
 renderCalendar();
+window.addEventListener('popstate', e=>{
+  const st=e.state||{v:'root'};
+  window._fromPop=true;
+  try{
+    if(st.v==='det'){ dayView=st.day||null; renderCalendar(); openDetail(st.sym,st.date); }
+    else if(st.v==='day'){ _closeDetailNow(); dayView=st.d; renderCalendar(); }
+    else { _closeDetailNow(); dayView=null; renderCalendar(); }
+  } finally { window._fromPop=false; }
+});
+try{ history.replaceState({v:'root'},'',location.pathname+location.search+location.hash); }catch(e){}
+(function openFromHash(){
+  const h=location.hash||''; let m=h.match(/^#day-(\d{4}-\d{2}-\d{2})$/);
+  if(m){ dayView=m[1]; try{history.replaceState({v:'day',d:m[1]},'');}catch(e){} renderCalendar(); return; }
+  m=h.match(/^#([A-Za-z][A-Za-z0-9.\-]{0,9})$/);
+  if(m){ const sym=m[1].toUpperCase(); try{history.replaceState({v:'det',sym:sym,date:null,day:null},'');}catch(e){}
+    window._fromPop=true; try{ openSym(sym); } finally { window._fromPop=false; } }
+})();
 loadLiveCalendar();
 // ── LIVE mode ────────────────────────────────────────────────────────────────
 // Prices tick every 5s on whatever view is showing (worker serves FMP-live behind a shared 5s
