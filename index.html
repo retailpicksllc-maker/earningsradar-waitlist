@@ -1012,6 +1012,7 @@ function loadDetChart(sym){
 function openDetail(sym,date){
   if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
   erTrack('ticker_click',{ticker:sym});
+  _recAdd(sym);
   const rowObj=(DATA.find(r=>r.symbol===sym&&r.date===date)||{}).row||{};
   const name=rowObj.name||(META[sym]&&META[sym].name)||sym;
   const col=s=>s.startsWith('+')?'var(--green)':(s?'var(--red)':'var(--muted)');
@@ -1312,16 +1313,25 @@ function searchMatches(q){
   }
   return [...new Set([...starts, ...contains])].slice(0,8);
 }
+function _recent(){ try{ return JSON.parse(localStorage.getItem('er_recent')||'[]'); }catch(e){ return []; } }
+function _recAdd(sym){ try{ let r=_recent().filter(t=>t!==sym); r.unshift(sym); localStorage.setItem('er_recent', JSON.stringify(r.slice(0,10))); }catch(e){} }
 function renderSearch(){
   _smatches=searchMatches(sIn.value); _shl=-1;
-  if(!sIn.value.trim()){ sRes.classList.remove('on'); sRes.innerHTML=''; return; }
+  if(!sIn.value.trim()){
+    const rec=_recent();
+    if(!rec.length){ sRes.classList.remove('on'); sRes.innerHTML=''; return; }
+    _smatches=rec.slice(0,8);
+    sRes.innerHTML=`<div style="padding:8px 12px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Recently viewed</div>`+
+      _smatches.map(t=>`<div class="sr" data-sym="${esc(t)}"><span class="tk">${esc(t)}</span><span class="nm">${esc(_tname[t]||'')}</span><span class="go">Open →</span></div>`).join('');
+    sRes.classList.add('on'); return;
+  }
   if(!_smatches.length){ sRes.innerHTML=`<div class="empty">No ticker matching “${esc(sIn.value.toUpperCase())}”</div>`; sRes.classList.add('on'); return; }
   sRes.innerHTML=_smatches.map(t=>`<div class="sr" data-sym="${esc(t)}"><span class="tk">${esc(t)}</span><span class="nm">${esc(_tname[t]||'')}</span><span class="go">Open →</span></div>`).join('');
   sRes.classList.add('on');
 }
 function openSym(sym){ if(!sym) return; sym=sym.toUpperCase(); erTrack('search_open',{ticker:sym}); const hit=DATA.find(r=>r.symbol===sym); sRes.classList.remove('on'); sIn.value=''; sIn.blur(); if(hit) openDetail(hit.symbol, hit.date); else openDetail(sym, null); }
 sIn.addEventListener('input', renderSearch);
-sIn.addEventListener('focus', ()=>{ if(sIn.value.trim()) renderSearch(); });
+sIn.addEventListener('focus', ()=>renderSearch());
 sIn.addEventListener('keydown', e=>{
   if(e.key==='ArrowDown'){ e.preventDefault(); _shl=Math.min(_shl+1,_smatches.length-1); }
   else if(e.key==='ArrowUp'){ e.preventDefault(); _shl=Math.max(_shl-1,-1); }
