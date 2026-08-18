@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Earnings Radar — Accounts</title>
+<style>
+  :root{--bg:#0A1024;--card:#0d1430;--line:#2F3B63;--txt:#ECECF1;--muted:#9AA4C2;--blue:#6BA5FF;--green:#33D69F}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 16px 60px}
+  h1{font-size:22px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  button{background:#2F6BFF;color:#fff;border:0;border-radius:9px;padding:9px 16px;
+         font-size:14px;font-weight:700;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:600}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 15px;min-width:120px}
+  .stat .n{font-size:20px;font-weight:800}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+  table{width:100%;border-collapse:collapse;background:var(--card);
+        border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+  th{text-align:left;padding:10px 12px;color:var(--muted);font-size:10.5px;
+     text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--line);
+     cursor:pointer;user-select:none;white-space:nowrap}
+  th:hover{color:var(--txt)}
+  td{padding:11px 12px;border-bottom:1px solid #1d2647;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .em{font-weight:600}
+  .mut{color:var(--muted)}
+  .live{color:var(--green);font-weight:700}
+  .pill{display:inline-block;padding:1px 7px;border-radius:99px;border:1px solid var(--line);
+        font-size:11px;color:var(--muted)}
+  .msg{padding:40px 0;text-align:center;color:var(--muted)}
+  a{color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Accounts</h1>
+  <div class="sub">Who signed up, when they last came back, and how long they stay.</div>
+  <div class="bar">
+    <button id="signin">Sign in with Google</button>
+    <button id="refresh" class="ghost" style="display:none">Refresh</button>
+    <button id="csv" class="ghost" style="display:none">Download CSV</button>
+    <span id="who" class="mut"></span>
+  </div>
+  <div id="stats" class="stats"></div>
+  <div id="out" class="msg">Sign in with the owner account to view.</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCkYi_67SreyN6FG7oxrHLypOP0eOC3Efs",
+  authDomain: "earnings-radar-f398e.firebaseapp.com",
+  projectId: "earnings-radar-f398e",
+  appId: "1:621874989792:web:348614b693e5d261b45e85"
+});
+const auth = getAuth(app), fs = getFirestore(app);
+const $ = (s) => document.querySelector(s);
+let ROWS = [], sortKey = "lastSeen", sortDir = -1;
+
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function toDate(v) {
+  if (!v) return null;
+  if (typeof v.toDate === "function") return v.toDate();      // Firestore Timestamp
+  const d = new Date(v); return isNaN(d) ? null : d;          // GMT string fallback
+}
+function fmt(d) {
+  if (!d) return "—";
+  return d.toLocaleString([], { month: "short", day: "numeric", year: "numeric",
+                                hour: "numeric", minute: "2-digit" });
+}
+function ago(d) {
+  if (!d) return "";
+  const s = (Date.now() - d.getTime()) / 1000;
+  if (s < 90) return "just now";
+  if (s < 3600) return Math.round(s / 60) + "m ago";
+  if (s < 86400) return Math.round(s / 3600) + "h ago";
+  if (s < 86400 * 30) return Math.round(s / 86400) + "d ago";
+  return Math.round(s / 86400 / 30) + "mo ago";
+}
+function dur(sec) {
+  sec = +sec || 0;
+  if (sec < 60) return sec + "s";
+  if (sec < 3600) return Math.round(sec / 60) + "m";
+  return (sec / 3600).toFixed(1) + "h";
+}
+
+async function load() {
+  $("#out").innerHTML = '<div class="msg">Loading…</div>';
+  try {
+    const snap = await getDocs(collection(fs, "users"));
+    ROWS = snap.docs.map((d) => {
+      const u = d.data() || {};
+      return {
+        uid: d.id,
+        email: u.email || "",
+        name: u.name || "",
+        provider: (u.provider || "").replace(".com", ""),
+        created: toDate(u.createdAtTs) || toDate(u.createdAt),
+        lastSeen: toDate(u.lastSeen),
+        visits: u.visits || 0,
+        seconds: u.totalSeconds || 0,
+        watch: (u.watchlist || []).length,
+        optout: !!u.digest_optout
+      };
+    });
+    render();
+  } catch (e) {
+    $("#out").innerHTML = '<div class="msg">Could not read accounts (' + esc(e.code || e.message) +
+      ').<br>Firestore rules must allow this account to list <code>users</code>.</div>';
+  }
+}
+
+function render() {
+  const day = 86400000, now = Date.now();
+  const active7 = ROWS.filter((r) => r.lastSeen && now - r.lastSeen.getTime() < 7 * day).length;
+  const new7 = ROWS.filter((r) => r.created && now - r.created.getTime() < 7 * day).length;
+  const watchers = ROWS.filter((r) => r.watch > 0).length;
+  $("#stats").innerHTML =
+    [["Total accounts", ROWS.length], ["Active (7d)", active7], ["New (7d)", new7],
+     ["With watchlists", watchers]]
+    .map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+  const rows = [...ROWS].sort((a, b) => {
+    let x = a[sortKey], y = b[sortKey];
+    if (x instanceof Date || y instanceof Date) { x = x ? x.getTime() : 0; y = y ? y.getTime() : 0; }
+    if (typeof x === "string") { x = x.toLowerCase(); y = (y || "").toLowerCase(); }
+    return x > y ? sortDir : x < y ? -sortDir : 0;
+  });
+  const th = (k, label) =>
+    `<th data-k="${k}">${label}${sortKey === k ? (sortDir === -1 ? " ↓" : " ↑") : ""}</th>`;
+  $("#out").innerHTML = `<table><thead><tr>
+      ${th("email", "Account")}${th("lastSeen", "Last signed in")}${th("created", "Signed up")}
+      ${th("visits", "Visits")}${th("seconds", "Time on site")}${th("watch", "Watchlist")}
+    </tr></thead><tbody>` +
+    rows.map((r) => `<tr>
+      <td><div class="em">${esc(r.email || "(no email)")}</div>
+          <div class="mut">${esc(r.name || "")} ${r.provider ? `<span class="pill">${esc(r.provider)}</span>` : ""}</div></td>
+      <td>${fmt(r.lastSeen)}<div class="mut">${ago(r.lastSeen)}</div></td>
+      <td>${fmt(r.created)}<div class="mut">${ago(r.created)}</div></td>
+      <td>${r.visits}</td>
+      <td>${dur(r.seconds)}</td>
+      <td>${r.watch || "—"}${r.optout ? '<div class="mut">no digest</div>' : ""}</td>
+    </tr>`).join("") + "</tbody></table>";
+
+  document.querySelectorAll("th[data-k]").forEach((el) => {
+    el.onclick = () => {
+      const k = el.getAttribute("data-k");
+      if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = -1; }
+      render();
+    };
+  });
+}
+
+$("#csv").onclick = () => {
+  const head = ["email", "name", "provider", "signed_up", "last_signed_in", "visits", "seconds", "watchlist"];
+  const body = ROWS.map((r) => [r.email, r.name, r.provider,
+    r.created ? r.created.toISOString() : "", r.lastSeen ? r.lastSeen.toISOString() : "",
+    r.visits, r.seconds, r.watch]);
+  const csv = [head, ...body].map((line) =>
+    line.map((v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "earnings-radar-accounts.csv"; a.click();
+};
+$("#refresh").onclick = load;
+$("#signin").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => alert(e.message));
+
+onAuthStateChanged(auth, (u) => {
+  if (u) {
+    $("#signin").textContent = "Sign out";
+    $("#signin").onclick = () => signOut(auth);
+    $("#refresh").style.display = $("#csv").style.display = "";
+    $("#who").textContent = u.email || "";
+    load();
+  } else {
+    $("#signin").textContent = "Sign in with Google";
+    $("#signin").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => alert(e.message));
+    $("#refresh").style.display = $("#csv").style.display = "none";
+    $("#who").textContent = "";
+    $("#stats").innerHTML = "";
+    $("#out").innerHTML = '<div class="msg">Sign in with the owner account to view.</div>';
+  }
+});
+</script>
+</body>
+</html>
