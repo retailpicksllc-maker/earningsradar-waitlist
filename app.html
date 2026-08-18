@@ -60,6 +60,33 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .weeklabel small{display:block;color:var(--muted);font-weight:600;font-size:12px;margin-top:2px}
   .searchbox{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;padding:9px 13px;min-width:220px}
   .searchbox input{background:none;border:none;outline:none;color:var(--text);font-size:14px;width:100%}
+  /* ── site pages (Earnings / My Stocks / News) ── */
+  .page{padding:6px 0 44px}
+  .ptitle h1{font-size:26px;margin:18px 0 2px}
+  .ptitle p{color:var(--muted);margin:0 0 10px;font-size:14px}
+  .psec{margin:10px 0 20px}
+  .psec h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:20px 0 9px}
+  .pempty{padding:34px;text-align:center;color:var(--muted);background:var(--bg2);border:1px solid var(--border2);border-radius:14px;line-height:1.6}
+  .erow{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border2);border-radius:13px;margin-bottom:8px;cursor:pointer}
+  .erow:hover{border-color:var(--blueLt)}
+  .erow .tile{width:36px;height:36px;flex:0 0 auto;font-size:15px}
+  .emain{min-width:0;flex:1}
+  .emain b{font-size:15px}
+  .enm{color:var(--muted);margin-left:8px;font-size:13px}
+  .esub{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .eside{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 auto;text-align:right}
+  .epx .lprice{font-weight:700}
+  .epx .lchg{font-size:12px;margin-left:5px}
+  .epx .lchg.up{color:var(--green)}.epx .lchg.down{color:var(--red)}
+  .ebadge{font-size:11px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:99px;background:#20294d;color:var(--muted)}
+  .ebadge.beat{background:rgba(52,211,153,.15);color:var(--green)}
+  .ebadge.miss{background:rgba(248,113,113,.15);color:var(--red)}
+  .nrow{display:block;padding:13px 15px;background:var(--bg2);border:1px solid var(--border2);border-radius:13px;margin-bottom:8px;text-decoration:none;color:var(--text)}
+  .nrow:hover{border-color:var(--blueLt)}
+  .nhead{font-weight:700;font-size:14.5px;line-height:1.35}
+  .nsum{color:var(--muted);font-size:13px;margin-top:4px;line-height:1.45}
+  .nmeta{color:var(--muted);font-size:11.5px;margin-top:6px;text-transform:uppercase;letter-spacing:.05em}
+  @media(max-width:680px){.nav .links{overflow-x:auto;white-space:nowrap;scrollbar-width:none}.nav .links::-webkit-scrollbar{display:none}}
   .sresults{position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;max-height:340px;overflow:auto;display:none;z-index:80;box-shadow:0 16px 48px rgba(0,0,0,.55)}
   .sresults.on{display:block}
   .sresults .sr{display:flex;align-items:center;gap:10px;padding:10px 13px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05)}
@@ -321,8 +348,11 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   <a class="brand" href="index.html" aria-label="Earnings Radar">
     <span class="wmico"><svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="leaf-l" d="M60 6 C2 42 2 108 60 144 Z"/><path class="leaf-r" d="M60 6 C118 42 118 108 60 144 Z"/></svg></span>
   </a>
-  <div class="links">
-    <a href="/" class="active">Calendar</a>
+  <div class="links" id="navTabs">
+    <a href="#" data-page="cal" class="active">Calendar</a>
+    <a href="#" data-page="earn">Earnings</a>
+    <a href="#" data-page="my">My Stocks</a>
+    <a href="#" data-page="news">News</a>
     <a href="#" id="authTrigger" class="cta">Sign in</a>
   </div>
 </div></nav>
@@ -353,6 +383,10 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   </div>
 
   <div id="calGrid" class="calweek"><div class="loading">Loading earnings…</div></div>
+
+  <div id="pageEarn" class="page" hidden></div>
+  <div id="pageMy" class="page" hidden></div>
+  <div id="pageNews" class="page" hidden></div>
   <div class="calnote" id="calNote"></div>
 </div>
 
@@ -1412,18 +1446,133 @@ $('#calNote').textContent = 'Live earnings · updated '+BUILT_AT;
   weekOffset=Math.max(0, Math.round((tMon-thisMon)/(7*24*3600*1000)));
 })();
 renderCalendar();
+// ── Site pages: Calendar / Earnings / My Stocks / News ──────────────────────
+let PAGE='cal';
+const PAGE_HASH={earn:'#earnings',my:'#mystocks',news:'#news'};
+function _calShow(on){
+  ['.calhead','.calbar'].forEach(s=>{const el=document.querySelector(s); if(el) el.style.display=on?'':'none';});
+  const g=document.getElementById('calGrid'); if(g) g.style.display=on?'':'none';
+  const lb=document.getElementById('liveband'); if(lb) lb.style.display=on?'':'none';
+}
+function setPage(p){
+  PAGE=p;
+  document.querySelectorAll('#navTabs a[data-page]').forEach(a=>a.classList.toggle('active',a.getAttribute('data-page')===p));
+  _calShow(p==='cal');
+  const pages={earn:'pageEarn',my:'pageMy',news:'pageNews'};
+  Object.values(pages).forEach(id=>{const el=document.getElementById(id); if(el) el.hidden=true;});
+  if(p!=='cal'){ const el=document.getElementById(pages[p]); if(el) el.hidden=false; }
+  if(p==='earn') renderEarnPage();
+  if(p==='my') renderMyPage();
+  if(p==='news') renderNewsPage();
+  if(!window._fromPop){ try{ history.pushState(p==='cal'?{v:'root'}:{v:'page',p:p},'',p==='cal'?(location.pathname+location.search):PAGE_HASH[p]); }catch(e){} }
+  erTrack('page_view',{page:p});
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('#navTabs a[data-page]').forEach(a=>{
+  a.addEventListener('click',e=>{ e.preventDefault(); const p=a.getAttribute('data-page'); if(p!==PAGE) setPage(p); });
+});
+const _fmtRevM2=v=>v==null?'—':(v>=1000?('$'+(v/1000).toFixed(1)+'B'):('$'+Math.round(v)+'M'));
+function _pgTile(sym){ return `<div class="tile mono" style="background:${monoColor(sym)}" data-logo="${esc(sym)}">${(sym[0]||'?').toUpperCase()}</div>`; }
+function renderEarnPage(){
+  const el=document.getElementById('pageEarn'); if(!el) return;
+  const t=iso(new Date());
+  const todays=DATA.filter(r=>r.date===t);
+  const mkrow=r=>{
+    const o=r.row||{}; const rep=o.epsActual!=null;
+    const surp=(rep&&o.eps!=null)?surprise(o.epsActual,o.eps):'';
+    const badge=rep
+      ?`<span class="ebadge ${o.eps!=null?(o.epsActual>=o.eps?'beat':'miss'):''}">${o.eps!=null?(o.epsActual>=o.eps?'BEAT':'MISS'):'REPORTED'}${surp?' '+surp:''}</span>`
+      :`<span class="ebadge">DUE</span>`;
+    const nm=(r.name&&r.name!==r.symbol)?r.name:'';
+    return `<div class="erow" data-sym="${esc(r.symbol)}" data-date="${esc(r.date)}">${_pgTile(r.symbol)}
+      <div class="emain"><b>${esc(r.symbol)}</b><span class="enm">${esc(nm)}</span>
+        <div class="esub">EPS ${rep?fmtEps(o.epsActual):'—'} vs ${fmtEps(o.eps)} est · Rev ${(rep&&o.revenueActual!=null)?_fmtRevM2(o.revenueActual):'—'} vs ${_fmtRevM2(o.revenueEstimate)} est</div></div>
+      <div class="eside">${badge}<span class="epx" data-quote="${esc(r.symbol)}"></span></div></div>`;
+  };
+  const sec=(label,list)=> list.length
+    ? `<div class="psec"><h2>${label}</h2>${list.map(mkrow).join('')}</div>`
+    : `<div class="psec"><h2>${label}</h2><div class="pempty">No reports.</div></div>`;
+  const bmo=todays.filter(r=>sessionOf(r.time)==='bmo');
+  const amc=todays.filter(r=>sessionOf(r.time)!=='bmo');
+  const nice=new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+  el.innerHTML=`<div class="ptitle"><h1>Today's Earnings</h1><p>${nice} · live results as they land</p></div>`
+    + sec('Before Open',bmo) + sec('After Close',amc);
+  upgradeLogos(el); pollPrices();
+}
+function renderMyPage(){
+  const el=document.getElementById('pageMy'); if(!el) return;
+  const list=(window.erWatch?erWatch.list():[]);
+  if(!list.length){
+    el.innerHTML=`<div class="ptitle"><h1>My Stocks</h1></div>
+      <div class="pempty">You haven't starred any stocks yet.<br>Tap the 🔔 on any stock in the calendar to watch it here.</div>`;
+    return;
+  }
+  const t=iso(new Date());
+  const rows=list.map(sym=>{
+    const next=DATA.filter(r=>r.symbol===sym&&r.date>=t).sort((a,b)=>a.date<b.date?-1:1)[0];
+    let when='No upcoming report date yet';
+    if(next){
+      const d=new Date(next.date+'T12:00:00'); const sess=sessionOf(next.time);
+      const days=Math.round((d-new Date(t+'T12:00:00'))/86400000);
+      when=`Reports ${d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}`
+        +(sess==='bmo'?' · Before open':sess==='amc'?' · After close':'')
+        +(days===0?' · today':' · in '+days+'d');
+    }
+    const nm=(_tname[sym]&&_tname[sym]!==sym)?_tname[sym]:'';
+    return `<div class="erow" data-sym="${esc(sym)}" data-date="${esc(next?next.date:'')}">${_pgTile(sym)}
+      <div class="emain"><b>${esc(sym)}</b><span class="enm">${esc(nm)}</span><div class="esub">${when}</div></div>
+      <div class="eside"><span class="epx" data-quote="${esc(sym)}"></span></div></div>`;
+  }).join('');
+  el.innerHTML=`<div class="ptitle"><h1>My Stocks</h1><p>${list.length} watched · prices update live</p></div><div class="psec">${rows}</div>`;
+  upgradeLogos(el); pollPrices();
+}
+let _newsCache=null,_newsTs=0;
+async function renderNewsPage(){
+  const el=document.getElementById('pageNews'); if(!el) return;
+  if(!_newsCache) el.innerHTML=`<div class="ptitle"><h1>Market News</h1></div><div class="pempty">Loading headlines…</div>`;
+  try{
+    if(!_newsCache||Date.now()-_newsTs>300000){
+      const r=await fetch(`${WORKER_BASE}/v1/marketnews?limit=40`,{cache:'no-store'});
+      if(r.ok){ const j=await r.json(); _newsCache=j.news||[]; _newsTs=Date.now(); }
+    }
+    if(!_newsCache||!_newsCache.length) throw new Error('empty');
+    const ago=ts=>{ if(!ts) return ''; const s=(Date.now()/1000)-ts;
+      if(s<3600) return Math.max(1,Math.round(s/60))+'m ago';
+      if(s<86400) return Math.round(s/3600)+'h ago';
+      return Math.round(s/86400)+'d ago'; };
+    el.innerHTML=`<div class="ptitle"><h1>Market News</h1><p>Latest headlines · refreshes every few minutes</p></div><div class="psec">`
+      + _newsCache.map(a=>`<a class="nrow" href="${esc(a.url)}" target="_blank" rel="noopener">
+          <div class="nhead">${esc(a.headline)}</div>
+          ${a.summary?`<div class="nsum">${esc(a.summary)}</div>`:''}
+          <div class="nmeta">${esc(a.source||'')}${a.datetime?' · '+ago(a.datetime):''}</div></a>`).join('')
+      + `</div>`;
+  }catch(e){ if(!_newsCache||!_newsCache.length) el.innerHTML=`<div class="ptitle"><h1>Market News</h1></div><div class="pempty">Couldn't load news right now — try again in a minute.</div>`; }
+}
+['pageEarn','pageMy'].forEach(id=>{ const el=document.getElementById(id);
+  if(el) el.addEventListener('click',e=>{ const w=e.target.closest('[data-sym]');
+    if(w) openDetail(w.getAttribute('data-sym'), w.getAttribute('data-date')||null); }); });
+// ── Browser history: back button crosses pages, day views and popups; deep links work ──
 window.addEventListener('popstate', e=>{
   const st=e.state||{v:'root'};
   window._fromPop=true;
   try{
-    if(st.v==='det'){ dayView=st.day||null; renderCalendar(); openDetail(st.sym,st.date); }
-    else if(st.v==='day'){ _closeDetailNow(); dayView=st.d; renderCalendar(); }
-    else { _closeDetailNow(); dayView=null; renderCalendar(); }
+    if(st.v==='det'){ if(PAGE!=='cal') setPage('cal'); dayView=st.day||null; renderCalendar(); openDetail(st.sym,st.date); }
+    else if(st.v==='day'){ _closeDetailNow(); if(PAGE!=='cal') setPage('cal'); dayView=st.d; renderCalendar(); }
+    else if(st.v==='page'){ _closeDetailNow(); setPage(st.p); }
+    else { _closeDetailNow(); if(PAGE!=='cal') setPage('cal'); dayView=null; renderCalendar(); }
   } finally { window._fromPop=false; }
 });
 try{ history.replaceState({v:'root'},'',location.pathname+location.search+location.hash); }catch(e){}
 (function openFromHash(){
-  const h=location.hash||''; let m=h.match(/^#day-(\d{4}-\d{2}-\d{2})$/);
+  const h=(location.hash||'');
+  const hl=h.toLowerCase();
+  if(hl==='#earnings'||hl==='#mystocks'||hl==='#news'){
+    const p=hl==='#earnings'?'earn':hl==='#mystocks'?'my':'news';
+    window._fromPop=true; try{ setPage(p); } finally { window._fromPop=false; }
+    try{ history.replaceState({v:'page',p:p},''); }catch(e){}
+    return;
+  }
+  let m=h.match(/^#day-(\d{4}-\d{2}-\d{2})$/);
   if(m){ dayView=m[1]; try{history.replaceState({v:'day',d:m[1]},'');}catch(e){} renderCalendar(); return; }
   m=h.match(/^#([A-Za-z][A-Za-z0-9.\-]{0,9})$/);
   if(m){ const sym=m[1].toUpperCase(); try{history.replaceState({v:'det',sym:sym,date:null,day:null},'');}catch(e){}
