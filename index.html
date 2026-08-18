@@ -234,7 +234,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .nav .brand .b{color:var(--blueLt)}
   .nav .wmico{width:24px;height:30px;display:grid;place-items:center;flex:none;filter:drop-shadow(0 4px 12px rgba(47,107,255,.5))}
   .nav .wmico svg{width:100%;height:100%}
-  .nav .links{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .nav .links{display:flex;align-items:center;gap:6px}
+  .nav .navright{margin-left:auto}
   .nav .links a{padding:8px 13px;border-radius:10px;font-size:14px;font-weight:700;color:var(--muted)}
   .nav .links a:hover{color:var(--text);background:var(--card)}
   .nav .links a.active{color:var(--text);background:var(--card2)}
@@ -353,6 +354,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
     <a href="#" data-page="earn">Earnings</a>
     <a href="#" data-page="my">My Stocks</a>
     <a href="#" data-page="news">News</a>
+  </div>
+  <div class="links navright">
     <a href="#" id="authTrigger" class="cta">Sign in</a>
   </div>
 </div></nav>
