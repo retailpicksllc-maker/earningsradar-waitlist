@@ -1453,6 +1453,9 @@ function _calShow(on){
   ['.calhead','.calbar'].forEach(s=>{const el=document.querySelector(s); if(el) el.style.display=on?'':'none';});
   const g=document.getElementById('calGrid'); if(g) g.style.display=on?'':'none';
   const lb=document.getElementById('liveband'); if(lb) lb.style.display=on?'':'none';
+  // App showcase + freshness stamp are calendar-page furniture — hide them on the other tabs.
+  const ap=document.getElementById('app'); if(ap) ap.style.display=on?'':'none';
+  const cn=document.getElementById('calNote'); if(cn) cn.style.display=on?'':'none';
 }
 function setPage(p){
   PAGE=p;
