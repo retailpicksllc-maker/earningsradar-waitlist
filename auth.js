@@ -4,7 +4,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, updateProfile, updatePassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail,
+  signOut, updateProfile, updatePassword, verifyBeforeUpdateEmail, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail,
   sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
   reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -225,7 +225,22 @@ root.innerHTML = `
           <div class="vmsg" data-vmsg></div>
         </div>
         <div class="prof">
-          <div class="prow"><span>Email</span><b data-pemail></b></div>
+          <div class="prow"><span>Email</span><b data-pemail></b><button class="pbtn" type="button" data-emopen style="display:none">Change</button></div>
+          <div class="pedit" data-embox style="display:none">
+            <div class="hint">We'll send a verification link to the <b>new</b> address. Your email only changes after you click that link — then sign in again with the new email.</div>
+            <label>New email</label>
+            <input type="email" data-newem autocomplete="email" placeholder="new@example.com" />
+            <label>Current password</label>
+            <div class="pwwrap">
+              <input type="password" data-empw autocomplete="current-password" placeholder="••••••••" />
+              <button type="button" class="pwtoggle" data-empwtg>Show</button>
+            </div>
+            <div class="vrow">
+              <button type="button" data-emcancel>Cancel</button>
+              <button type="button" data-emsave>Send verification</button>
+            </div>
+            <div class="pmsg" data-emmsg></div>
+          </div>
           <div class="prow"><span>Username</span><b data-pname>—</b><button class="pbtn" type="button" data-editname>Edit</button></div>
           <div class="pedit" data-namedit style="display:none">
             <input type="text" data-newname maxlength="40" placeholder="Your name" autocomplete="name" />
@@ -451,6 +466,42 @@ q("[data-namesave]").onclick = async () => {
   } catch (e) { m.style.color="#F87171"; m.textContent="Couldn't save ("+(e&&e.code||"error")+")."; }
 };
 
+_tg("[data-empw]","[data-empwtg]");
+q("[data-emopen]").onclick = () => {
+  q("[data-embox]").style.display = "block";
+  q("[data-newem]").value=""; q("[data-empw]").value=""; q("[data-emmsg]").textContent="";
+  q("[data-newem]").focus();
+};
+q("[data-emcancel]").onclick = () => { q("[data-embox]").style.display = "none"; };
+q("[data-emsave]").onclick = async () => {
+  const user = auth.currentUser; if (!user) return;
+  const m = q("[data-emmsg]"); m.style.color="#F87171"; m.textContent="";
+  const newem = q("[data-newem]").value.trim(), pw = q("[data-empw]").value;
+  if (!newem || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newem)) { m.textContent="Enter a valid new email."; return; }
+  if (newem.toLowerCase() === (user.email||"").toLowerCase()) { m.textContent="That's already your email."; return; }
+  if (!pw) { m.textContent="Enter your current password."; return; }
+  if (!user.emailVerified) { m.textContent="Verify your current email first (see the notice above)."; return; }
+  const btn = q("[data-emsave]"); btn.disabled = true;
+  try {
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pw));
+    // The switch is verification-gated: Firebase emails the NEW address and only applies the
+    // change when that link is clicked. Until then the old email keeps working.
+    await verifyBeforeUpdateEmail(user, newem);
+    m.style.color="#34D399";
+    m.textContent="Verification link sent to " + newem + ". Click it to complete the change, then sign in with the new email.";
+    q("[data-empw]").value="";
+  } catch (e) {
+    const c = e && e.code;
+    m.textContent = (c==="auth/invalid-credential"||c==="auth/wrong-password") ? "Current password is wrong."
+      : c==="auth/email-already-in-use" ? "That email already has an account."
+      : c==="auth/invalid-email" ? "That email doesn't look right."
+      : c==="auth/requires-recent-login" ? "Please sign out and back in, then try again."
+      : c==="auth/too-many-requests" ? "Too many attempts — try again in a few minutes."
+      : "Couldn't start the change ("+(c||"error")+").";
+  }
+  btn.disabled = false;
+};
+
 q("[data-pwopen]").onclick = () => {
   q("[data-pwbox]").style.display = "block";
   q("[data-curpw]").value=""; q("[data-newpw]").value=""; q("[data-pwmsg]").textContent="";
@@ -540,6 +591,9 @@ onAuthStateChanged(auth, (user) => {
     const hasPw = user.providerData.some((p) => p.providerId === "password");
     q("[data-pwrow]").style.display = hasPw ? "flex" : "none";
     if (!hasPw) q("[data-pwbox]").style.display = "none";
+    // Email change is password-account only: Google accounts' email is managed by Google.
+    q("[data-emopen]").style.display = hasPw ? "" : "none";
+    if (!hasPw) q("[data-embox]").style.display = "none";
     q("[data-namedit]").style.display = "none";
     // Signed in: release the gate. If the mandatory prompt was up, close it so they land in the calendar.
     if (_gated) { _gated = false; const x=q("[data-close]"); if(x) x.style.display=""; if (root.classList.contains("on")) close(); }
