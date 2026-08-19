@@ -89,6 +89,12 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .dtab{background:none;border:none;color:var(--muted);font-weight:700;font-size:14px;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
   .dtab:hover{color:var(--text)}
   .dtab.on{color:var(--text);border-bottom-color:var(--blueLt)}
+  .ovsec{background:var(--card);border:1px solid var(--border2);border-radius:12px;margin-top:12px;overflow:hidden}
+  .ovhead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-weight:800;font-size:13.5px;background:rgba(107,165,255,.06)}
+  .ovrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--border2);font-size:13.5px}
+  .ovrow span{color:var(--muted)}
+  .ovrow b{text-align:right}
+  .ovbtn{background:rgba(107,165,255,.12);border:1px solid var(--border2);color:var(--blueLt);font-weight:700;font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer;font-family:inherit}
   .dsec{display:none}
   .dsec.on{display:block}
   .divrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 13px;background:var(--card);border-radius:10px;margin-bottom:6px;font-size:14px}
@@ -1116,6 +1122,69 @@ function loadDetChart(sym){
   const open=marketPhase()!=='closed';
   loadBars(sym, open?'1D':'1M');
 }
+function _ovNum(v){return (v==null||isNaN(+v))?null:+v;}
+function _ovAbbr(v){v=_ovNum(v); if(v==null)return null;
+  const a=Math.abs(v);
+  if(a>=1e12)return '$'+(v/1e12).toFixed(2)+'T';
+  if(a>=1e9)return '$'+(v/1e9).toFixed(2)+'B';
+  if(a>=1e6)return '$'+(v/1e6).toFixed(2)+'M';
+  return '$'+v.toLocaleString(undefined,{maximumFractionDigits:0});}
+function _ovCnt(v){v=_ovNum(v); if(v==null)return null;
+  const a=Math.abs(v);
+  if(a>=1e9)return (v/1e9).toFixed(2)+'B';
+  if(a>=1e6)return (v/1e6).toFixed(2)+'M';
+  if(a>=1e3)return (v/1e3).toFixed(1)+'K';
+  return String(Math.round(v));}
+async function loadDetOverview(sym){
+  const el=document.getElementById('detOv'); if(!el) return;
+  el.innerHTML='<div class="loading">Loading stats…</div>';
+  try{
+    const r=await fetch(`${WORKER_BASE}/v1/overview/${encodeURIComponent(sym)}`,{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    const j=await r.json();
+    const hi=j.highlights||{}, pf=j.performance||{}, st=j.stats||{}, dv=j.dividend||{}, inf=j.info||{};
+    const row=(l,v,c)=>v==null?'':`<div class="ovrow"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
+    const sec=(title,rows,btn)=>rows.replace(/\s/g,'')?`<div class="ovsec"><div class="ovhead"><span>${title}</span>${btn||''}</div>${rows}</div>`:'';
+    // Highlights
+    let hrows=row('Market cap',_ovAbbr(hi.marketCap))
+      +row('P/E ratio',_ovNum(hi.pe)!=null?(+hi.pe).toFixed(2):null)
+      +row('P/S ratio',_ovNum(hi.ps)!=null?(+hi.ps).toFixed(2):null)
+      +row('EPS (TTM)',_ovNum(hi.epsTtm)!=null?'$'+(+hi.epsTtm).toFixed(2):null)
+      +row('Revenue (TTM)',_ovAbbr(hi.revenueTtm));
+    // Performance
+    let chg=_ovNum(pf.change), pct=_ovNum(pf.changePct);
+    let chgTxt=null,chgCol=null;
+    if(chg!=null){const s=chg>=0?'+':'-';chgCol=chg>=0?'var(--green)':'var(--red)';
+      chgTxt=`${s}$${Math.abs(chg).toFixed(2)}${pct!=null?` (${s}${Math.abs(pct).toFixed(2)}%)`:''}`;}
+    let rng=null;
+    if(_ovNum(pf.yearLow)!=null&&_ovNum(pf.yearHigh)!=null)rng=`$${(+pf.yearLow).toFixed(2)} – $${(+pf.yearHigh).toFixed(2)}`;
+    else if(pf.range)rng=esc(String(pf.range));
+    let prows=row('Current price',_ovNum(pf.price)!=null?'$'+(+pf.price).toFixed(2):null)
+      +row('Day change',chgTxt,chgCol)
+      +row('Previous close',_ovNum(pf.prevClose)!=null?'$'+(+pf.prevClose).toFixed(2):null)
+      +row('52-week range',rng);
+    // Statistics
+    let srows=row("Today's volume",_ovCnt(st.volume))
+      +row('Avg volume',_ovCnt(st.avgVolume))
+      +row('Shares outstanding',_ovCnt(st.sharesOut))
+      +row('Float',_ovCnt(st.floatShares));
+    // Dividend
+    let dyv=_ovNum(dv['yield']); if(dyv!=null&&dyv<1)dyv=dyv*100;
+    let drow='';
+    if(_ovNum(dv.lastDividend)!=null&&+dv.lastDividend>0)
+      drow=row('Dividend (yield)','$'+(+dv.lastDividend).toFixed(2)+(dyv!=null?` (${dyv.toFixed(2)}%)`:''));
+    const dbtn='<button class="ovbtn" onclick="document.querySelector(\'#dtabs .dtab[data-dt=div]\').click()">View history</button>';
+    // Ticker info
+    let irows=row('CEO',inf.ceo?esc(inf.ceo):null)
+      +row('Exchange',inf.exchange?esc(String(inf.exchange)):null)
+      +row('Sector',inf.sector?esc(inf.sector):null)
+      +row('Industry',inf.industry?esc(inf.industry):null)
+      +row('Employees',_ovCnt(inf.employees));
+    el.innerHTML=sec('Highlights',hrows)+sec('Performance',prows)+sec('Statistics',srows)
+      +(drow?sec('Dividends',drow,dbtn):'')+sec('Ticker info',irows)
+      ||'<div class="divempty">No stats available right now.</div>';
+  }catch(e){ el.innerHTML='<div class="divempty">Couldn\'t load stats right now.</div>'; }
+}
 async function loadDetDividends(sym){
   const el=document.getElementById('detDivs'); if(!el) return;
   el.innerHTML='<div class="loading">Loading dividends…</div>';
@@ -1229,6 +1298,7 @@ function openDetail(sym,date){
     <div class="dsec" data-ds="over">
       <div class="detchart" id="detChart"></div>
       <div class="statrow" id="detMeta" style="grid-template-columns:repeat(3,1fr)"></div>
+      <div id="detOv"></div>
     </div>
     <div class="dsec" data-ds="news"><div id="detNews"></div></div>
     <div class="dsec" data-ds="fil"><div id="detFilings"></div></div>
@@ -1241,7 +1311,7 @@ function openDetail(sym,date){
     document.querySelectorAll('#dtabs .dtab').forEach(x=>x.classList.toggle('on',x===b));
     const k=b.getAttribute('data-dt');
     document.querySelectorAll('#sheet .dsec').forEach(s=>s.classList.toggle('on',s.getAttribute('data-ds')===k));
-    if(k==='over'&&!_detLazy.over){ _detLazy.over=true; loadDetChart(sym); }
+    if(k==='over'&&!_detLazy.over){ _detLazy.over=true; loadDetChart(sym); loadDetOverview(sym); }
     if(k==='div'&&!_detLazy.div){ _detLazy.div=true; loadDetDividends(sym); }
     erTrack('det_tab',{tab:k,ticker:sym});
   });
