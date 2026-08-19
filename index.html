@@ -818,9 +818,9 @@ function renderDay(dISO){
   const list=dedupClasses(DATA.filter(r=>r.date===dISO && hasData(r)).sort((a,b)=>_mcap(b)-_mcap(a)));
   const isPast=dISO<iso(new Date());
   const before=list.filter(r=>sessionOf(r.time)==='bmo');
-  // Everyone gets a session: expected-time inference happens upstream (mapWorkerRow); anything
-  // still unknown lands in After Close rather than a TBD bucket or being dropped.
-  const after=list.filter(r=>sessionOf(r.time)!=='bmo');
+  const after=list.filter(r=>sessionOf(r.time)==='amc');
+  // Session honesty: if no source knows the session, say so instead of mislabeling as After Close.
+  const tbd=list.filter(r=>sessionOf(r.time)==='tbd');
   const DCAP=5;
   const sess=(items,label)=>{
     if(!items.length) return '';
@@ -828,7 +828,7 @@ function renderDay(dISO){
     const more=items.length>DCAP?`<div class="lmore">Show ${items.length-DCAP} more</div>`:'';
     return `<div class="lsess"><div class="lsesshead">${label} <span style="color:var(--muted)">· ${items.length}</span></div>${rowsHtml}${more}</div>`;
   };
-  const body = list.length ? sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')
+  const body = list.length ? sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')+sess(tbd,'◷ Time not specified')
     : `<div style="padding:44px;text-align:center;color:var(--muted)">No earnings on this day.</div>`;
   $('#calGrid').innerHTML=`<div class="dayback" id="dayBack">‹ Back to calendar</div><div class="dayhead2"><h2>${title}</h2><div class="dsub">${list.length} ${list.length===1?'company':'companies'} reporting</div></div>${body}`;
   upgradeLogos($('#calGrid'));
@@ -867,10 +867,11 @@ function renderList(){
     list=dedupClasses(list);
     const isPast=dISO<todayISO;
     const before=list.filter(r=>sessionOf(r.time)==='bmo');
-    const after=list.filter(r=>sessionOf(r.time)!=='bmo');  // unknown session → After Close, never dropped
+    const after=list.filter(r=>sessionOf(r.time)==='amc');
+    const tbd=list.filter(r=>sessionOf(r.time)==='tbd');   // honest bucket when no source knows the session
     const isToday=dISO===todayISO;
     html+=`<div class="lday"><div class="ldayhead${isToday?' today':''}">${days[i]} <span class="dnum">${d.getDate()}</span></div>`+
-      sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')+`</div>`;
+      sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')+sess(tbd,'◷ Time not specified')+`</div>`;
   }
   $('#calGrid').innerHTML = html || `<div style="padding:44px;text-align:center;color:var(--muted)">No earnings this week.</div>`;
   upgradeLogos($('#calGrid'));
@@ -1683,10 +1684,11 @@ function renderEarnPage(){
     ? `<div class="psec"><h2>${label}</h2>${list.map(mkrow).join('')}</div>`
     : `<div class="psec"><h2>${label}</h2><div class="pempty">No reports.</div></div>`;
   const bmo=todays.filter(r=>sessionOf(r.time)==='bmo');
-  const amc=todays.filter(r=>sessionOf(r.time)!=='bmo');
+  const amc=todays.filter(r=>sessionOf(r.time)==='amc');
+  const tbd=todays.filter(r=>sessionOf(r.time)==='tbd');
   const nice=new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
   el.innerHTML=`<div class="ptitle"><h1>Today's Earnings</h1><p>${nice} · live results as they land</p></div>`
-    + sec('Before Open',bmo) + sec('After Close',amc);
+    + sec('Before Open',bmo) + sec('After Close',amc) + (tbd.length?sec('Time not specified',tbd):'');
   upgradeLogos(el); pollPrices();
 }
 function renderMyPage(){
