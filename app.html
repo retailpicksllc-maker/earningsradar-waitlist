@@ -888,7 +888,7 @@ document.querySelectorAll('.viewswitch .vbtn').forEach(function(b){ b.onclick=fu
     erTrack('mystocks_toggle',{on:_myOnly?1:0}); paint(); renderCalendar();
   };
   paint();
-  const wire=()=>{ if(window.erWatch){ erWatch.onChange(()=>{ paint(); renderCalendar(); }); paint(); } else setTimeout(wire,400); };
+  const wire=()=>{ if(window.erWatch){ erWatch.onChange(()=>{ paint(); renderCalendar(); loadLiveCalendar(); }); paint(); } else setTimeout(wire,400); };
   wire();
 })();
 
@@ -920,8 +920,10 @@ async function loadLiveCalendar(){
     const d=(off)=>{const x=new Date(t);x.setDate(t.getDate()+off);return iso(x);};
     // Prefer the slim endpoint (same events, ~half the bytes); fall back to the full one so the
     // site keeps working regardless of which is deployed.
-    let r=await fetch(`${WORKER_BASE}/v1/calendar-lite?from=${d(-60)}&to=${d(95)}&min_cap=500`,{cache:'no-store'}).catch(()=>null);
-    if(!r||!r.ok) r=await fetch(`${WORKER_BASE}/v1/calendar?from=${d(-60)}&to=${d(95)}&min_cap=500`,{cache:'no-store'});
+    // Watchlisted tickers bypass the foreign-small-cap filter — a user's own stocks always show.
+    const _inc=encodeURIComponent((window.erWatch?erWatch.list():[]).slice(0,80).join(','));
+    let r=await fetch(`${WORKER_BASE}/v1/calendar-lite?from=${d(-60)}&to=${d(95)}&min_cap=500&include=${_inc}`,{cache:'no-store'}).catch(()=>null);
+    if(!r||!r.ok) r=await fetch(`${WORKER_BASE}/v1/calendar?from=${d(-60)}&to=${d(95)}&min_cap=500&include=${_inc}`,{cache:'no-store'});
     if(!r.ok) return;
     const j=await r.json();
     const rows=Array.isArray(j)?j:(j.data||j.events||j.calendar||[]);
