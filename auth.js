@@ -252,23 +252,12 @@ root.innerHTML = `
           </div>
           <div class="prow" data-pwrow><span>Password</span><b data-pwmask>••••••••</b><button class="pbtn" type="button" data-pwopen>Change</button></div>
           <div class="pedit" data-pwbox style="display:none">
-            <div class="hint">Passwords are stored one-way encrypted — no one (including us) can display your current one. Type it below to change it; use the eye toggles to see what you're typing.</div>
-            <label>Current password</label>
-            <div class="pwwrap">
-              <input type="password" data-curpw autocomplete="current-password" placeholder="••••••••" />
-              <button type="button" class="pwtoggle" data-curpwtg>Show</button>
-            </div>
-            <label>New password</label>
-            <div class="pwwrap">
-              <input type="password" data-newpw autocomplete="new-password" placeholder="At least 6 characters" />
-              <button type="button" class="pwtoggle" data-newpwtg>Show</button>
-            </div>
+            <div class="hint">For security, password changes go through your email: we send a secure link to <b data-pwemail></b> and you set the new password from there.</div>
             <div class="vrow">
               <button type="button" data-pwcancel>Cancel</button>
-              <button type="button" data-pwsave>Change password</button>
+              <button type="button" data-pwsend>Email me the link</button>
             </div>
             <div class="pmsg" data-pwmsg></div>
-            <span class="forgot" data-pwreset>Forgot it? Email me a reset link instead</span>
           </div>
         </div>
         <div class="row">
@@ -441,7 +430,6 @@ q("[data-delconfirm]").onclick = async () => {
 function _tg(inpSel, btnSel){ q(btnSel).onclick = () => {
   const i=q(inpSel), show=i.type==="password";
   i.type=show?"text":"password"; q(btnSel).textContent=show?"Hide":"Show"; i.focus(); }; }
-_tg("[data-curpw]","[data-curpwtg]"); _tg("[data-newpw]","[data-newpwtg]");
 
 q("[data-editname]").onclick = () => {
   q("[data-namedit]").style.display = "block";
@@ -504,39 +492,25 @@ q("[data-emsave]").onclick = async () => {
 
 q("[data-pwopen]").onclick = () => {
   q("[data-pwbox]").style.display = "block";
-  q("[data-curpw]").value=""; q("[data-newpw]").value=""; q("[data-pwmsg]").textContent="";
+  q("[data-pwmsg]").textContent = "";
+  q("[data-pwemail]").textContent = (auth.currentUser && auth.currentUser.email) || "your email";
 };
 q("[data-pwcancel]").onclick = () => { q("[data-pwbox]").style.display = "none"; };
-q("[data-pwsave]").onclick = async () => {
+q("[data-pwsend]").onclick = async () => {
   const user = auth.currentUser; if (!user) return;
-  const m = q("[data-pwmsg]"); m.style.color="#F87171"; m.textContent="";
-  const cur = q("[data-curpw]").value, nw = q("[data-newpw]").value;
-  if (!cur) { m.textContent="Enter your current password."; return; }
-  if (!nw || nw.length < 6) { m.textContent="New password must be at least 6 characters."; return; }
-  if (!user.emailVerified) { m.textContent="Verify your email first (see the notice above)."; return; }
-  const btn = q("[data-pwsave]"); btn.disabled = true;
+  const m = q("[data-pwmsg]");
+  const btn = q("[data-pwsend]"); btn.disabled = true;
   try {
-    // Email-verified account + fresh re-auth with the CURRENT password are both required.
-    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, cur));
-    await updatePassword(user, nw);
+    await sendPasswordResetEmail(auth, user.email);
     m.style.color="#34D399";
-    m.textContent="Password changed. A confirmation email was sent to " + user.email + ".";
-    q("[data-curpw]").value=""; q("[data-newpw]").value="";
-    setTimeout(()=>{ q("[data-pwbox]").style.display="none"; }, 1600);
+    m.textContent="Link sent to " + user.email + " — open it to set your new password.";
   } catch (e) {
-    const c = e && e.code;
-    m.textContent = (c==="auth/invalid-credential"||c==="auth/wrong-password") ? "Current password is wrong."
-      : c==="auth/weak-password" ? "New password is too weak (6+ characters)."
-      : c==="auth/too-many-requests" ? "Too many attempts — try again in a few minutes."
-      : "Couldn't change it ("+(c||"error")+").";
+    m.style.color="#F87171";
+    m.textContent = (e && e.code === "auth/too-many-requests")
+      ? "Too many requests — try again in a few minutes."
+      : "Couldn't send just now — try again shortly.";
   }
   btn.disabled = false;
-};
-q("[data-pwreset]").onclick = async () => {
-  const m = q("[data-pwmsg]");
-  try { await sendPasswordResetEmail(auth, auth.currentUser.email);
-    m.style.color="#34D399"; m.textContent="Reset link sent to " + auth.currentUser.email + " — set the new password from that email."; }
-  catch (e) { m.style.color="#F87171"; m.textContent="Couldn't send just now — try again shortly."; }
 };
 
 /* show/hide password */
