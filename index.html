@@ -269,6 +269,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .nav .in{max-width:1400px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:16px}
   .nav .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px}
   .nav .brand .b{color:var(--blueLt)}
+  .nav .brand .bname{white-space:nowrap;letter-spacing:-.3px}
+  @media(max-width:760px){.nav .brand .bname{display:none}}
   .nav .wmico{width:24px;height:30px;display:grid;place-items:center;flex:none;filter:drop-shadow(0 4px 12px rgba(47,107,255,.5))}
   .nav .wmico svg{width:100%;height:100%}
   .nav .links{display:flex;align-items:center;gap:6px}
@@ -385,6 +387,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
 <nav class="nav"><div class="in">
   <a class="brand" href="index.html" aria-label="Earnings Radar">
     <span class="wmico"><svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="leaf-l" d="M60 6 C2 42 2 108 60 144 Z"/><path class="leaf-r" d="M60 6 C118 42 118 108 60 144 Z"/></svg></span>
+    <span class="bname">earnings&thinsp;<span class="b">radar</span></span>
   </a>
   <div class="links" id="navTabs">
     <a href="#" data-page="cal" class="active">Calendar</a>
@@ -398,7 +401,6 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
 </div></nav>
 <div class="wrap">
   <div class="calhead">
-    <div class="wm"><div class="wmico"><svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="leaf-l" d="M60 6 C2 42 2 108 60 144 Z"/><path class="leaf-r" d="M60 6 C118 42 118 108 60 144 Z"/></svg></div><div class="wmtext"><span>earnings</span><span class="b">radar</span></div></div>
     <div class="caltitle"><h1>Earnings Calendar</h1><p id="wkTitle">Week of —</p></div>
   </div>
 
