@@ -4,7 +4,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, updateProfile, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail,
+  signOut, updateProfile, updatePassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail,
   sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
   reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -153,6 +153,18 @@ const css = `
 .erAuth .pwtoggle{position:absolute;right:7px;top:7px;bottom:19px;padding:0 11px;border:1px solid rgba(255,255,255,.12);
   border-radius:8px;background:rgba(255,255,255,.06);color:#9AA4C2;font-weight:800;font-size:11.5px;cursor:pointer;letter-spacing:.4px}
 .erAuth .pwtoggle:hover{color:#ECECF1;border-color:#2F6BFF}
+.erAuth .prof{margin-top:18px;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;text-align:left}
+.erAuth .prow{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:14px}
+.erAuth .prow:first-child{border-top:0}
+.erAuth .prow>span{color:#9AA4C2;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;width:86px;flex:none}
+.erAuth .prow>b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.erAuth .prow .pbtn{border:1px solid rgba(255,255,255,.14);border-radius:8px;background:rgba(255,255,255,.06);color:#6BA5FF;font-weight:800;font-size:12px;padding:6px 11px;cursor:pointer}
+.erAuth .prow .pbtn:hover{border-color:#2F6BFF}
+.erAuth .pedit{padding:4px 14px 14px;border-top:0;text-align:left}
+.erAuth .pedit input{margin-bottom:9px}
+.erAuth .pedit .hint{color:#9AA4C2;font-size:12px;line-height:1.5;margin:2px 0 10px}
+.erAuth .pedit .vrow button{flex:1}
+.erAuth .pmsg{font-size:12.5px;font-weight:700;min-height:15px;margin-top:7px}
 .erAuth .dellink{background:none;border:none;color:#F87171;opacity:.75;font-weight:700;font-size:12.5px;cursor:pointer;margin-top:16px;text-decoration:underline}
 .erAuth .dellink:hover{opacity:1}
 .erAuth .delbox{margin-top:14px;padding:14px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.07);border-radius:12px;font-size:13px;text-align:left;line-height:1.5}
@@ -211,6 +223,38 @@ root.innerHTML = `
             <button type="button" data-vcheck>I've verified</button>
           </div>
           <div class="vmsg" data-vmsg></div>
+        </div>
+        <div class="prof">
+          <div class="prow"><span>Email</span><b data-pemail></b></div>
+          <div class="prow"><span>Username</span><b data-pname>—</b><button class="pbtn" type="button" data-editname>Edit</button></div>
+          <div class="pedit" data-namedit style="display:none">
+            <input type="text" data-newname maxlength="40" placeholder="Your name" autocomplete="name" />
+            <div class="vrow">
+              <button type="button" data-namecancel>Cancel</button>
+              <button type="button" data-namesave>Save</button>
+            </div>
+            <div class="pmsg" data-namemsg></div>
+          </div>
+          <div class="prow" data-pwrow><span>Password</span><b data-pwmask>••••••••</b><button class="pbtn" type="button" data-pwopen>Change</button></div>
+          <div class="pedit" data-pwbox style="display:none">
+            <div class="hint">Passwords are stored one-way encrypted — no one (including us) can display your current one. Type it below to change it; use the eye toggles to see what you're typing.</div>
+            <label>Current password</label>
+            <div class="pwwrap">
+              <input type="password" data-curpw autocomplete="current-password" placeholder="••••••••" />
+              <button type="button" class="pwtoggle" data-curpwtg>Show</button>
+            </div>
+            <label>New password</label>
+            <div class="pwwrap">
+              <input type="password" data-newpw autocomplete="new-password" placeholder="At least 6 characters" />
+              <button type="button" class="pwtoggle" data-newpwtg>Show</button>
+            </div>
+            <div class="vrow">
+              <button type="button" data-pwcancel>Cancel</button>
+              <button type="button" data-pwsave>Change password</button>
+            </div>
+            <div class="pmsg" data-pwmsg></div>
+            <span class="forgot" data-pwreset>Forgot it? Email me a reset link instead</span>
+          </div>
         </div>
         <div class="row">
           <a class="primary" href="index.html" style="text-align:center;text-decoration:none;display:block">Open the calendar →</a>
@@ -378,6 +422,72 @@ q("[data-delconfirm]").onclick = async () => {
   btn.disabled = false;
 };
 
+/* ---------- profile: username edit + password change ---------- */
+function _tg(inpSel, btnSel){ q(btnSel).onclick = () => {
+  const i=q(inpSel), show=i.type==="password";
+  i.type=show?"text":"password"; q(btnSel).textContent=show?"Hide":"Show"; i.focus(); }; }
+_tg("[data-curpw]","[data-curpwtg]"); _tg("[data-newpw]","[data-newpwtg]");
+
+q("[data-editname]").onclick = () => {
+  q("[data-namedit]").style.display = "block";
+  q("[data-newname]").value = (auth.currentUser && auth.currentUser.displayName) || "";
+  q("[data-namemsg]").textContent = ""; q("[data-newname]").focus();
+};
+q("[data-namecancel]").onclick = () => { q("[data-namedit]").style.display = "none"; };
+q("[data-namesave]").onclick = async () => {
+  const user = auth.currentUser; if (!user) return;
+  const nm = q("[data-newname]").value.trim();
+  const m = q("[data-namemsg]");
+  if (!nm) { m.style.color="#F87171"; m.textContent="Enter a name first."; return; }
+  try {
+    await updateProfile(user, { displayName: nm });
+    try { await setDoc(doc(_fs, "users", user.uid), { name: nm }, { merge: true }); } catch (e) {}
+    q("[data-pname]").textContent = nm;
+    q("[data-accname]").textContent = "Hi, " + nm;
+    q("[data-avatar]").textContent = (nm[0] || "A").toUpperCase();
+    const trigger = document.getElementById("authTrigger"); if (trigger) trigger.textContent = nm;
+    m.style.color="#34D399"; m.textContent="Username updated.";
+    setTimeout(()=>{ q("[data-namedit]").style.display="none"; }, 900);
+  } catch (e) { m.style.color="#F87171"; m.textContent="Couldn't save ("+(e&&e.code||"error")+")."; }
+};
+
+q("[data-pwopen]").onclick = () => {
+  q("[data-pwbox]").style.display = "block";
+  q("[data-curpw]").value=""; q("[data-newpw]").value=""; q("[data-pwmsg]").textContent="";
+};
+q("[data-pwcancel]").onclick = () => { q("[data-pwbox]").style.display = "none"; };
+q("[data-pwsave]").onclick = async () => {
+  const user = auth.currentUser; if (!user) return;
+  const m = q("[data-pwmsg]"); m.style.color="#F87171"; m.textContent="";
+  const cur = q("[data-curpw]").value, nw = q("[data-newpw]").value;
+  if (!cur) { m.textContent="Enter your current password."; return; }
+  if (!nw || nw.length < 6) { m.textContent="New password must be at least 6 characters."; return; }
+  if (!user.emailVerified) { m.textContent="Verify your email first (see the notice above)."; return; }
+  const btn = q("[data-pwsave]"); btn.disabled = true;
+  try {
+    // Email-verified account + fresh re-auth with the CURRENT password are both required.
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, cur));
+    await updatePassword(user, nw);
+    m.style.color="#34D399";
+    m.textContent="Password changed. A confirmation email was sent to " + user.email + ".";
+    q("[data-curpw]").value=""; q("[data-newpw]").value="";
+    setTimeout(()=>{ q("[data-pwbox]").style.display="none"; }, 1600);
+  } catch (e) {
+    const c = e && e.code;
+    m.textContent = (c==="auth/invalid-credential"||c==="auth/wrong-password") ? "Current password is wrong."
+      : c==="auth/weak-password" ? "New password is too weak (6+ characters)."
+      : c==="auth/too-many-requests" ? "Too many attempts — try again in a few minutes."
+      : "Couldn't change it ("+(c||"error")+").";
+  }
+  btn.disabled = false;
+};
+q("[data-pwreset]").onclick = async () => {
+  const m = q("[data-pwmsg]");
+  try { await sendPasswordResetEmail(auth, auth.currentUser.email);
+    m.style.color="#34D399"; m.textContent="Reset link sent to " + auth.currentUser.email + " — set the new password from that email."; }
+  catch (e) { m.style.color="#F87171"; m.textContent="Couldn't send just now — try again shortly."; }
+};
+
 /* show/hide password */
 q("[data-pwtoggle]").onclick = () => {
   const inp = q("[data-password]");
@@ -424,6 +534,13 @@ onAuthStateChanged(auth, (user) => {
     q("[data-vnote]").style.display = needsVerify ? "block" : "none";
     if (needsVerify) { q("[data-vemail]").textContent = user.email; q("[data-vmsg]").textContent = ""; }
     q("[data-delbox]").style.display = "none"; q("[data-delopen]").style.display = "";
+    // Profile card
+    q("[data-pemail]").textContent = user.email || "—";
+    q("[data-pname]").textContent = user.displayName || "—";
+    const hasPw = user.providerData.some((p) => p.providerId === "password");
+    q("[data-pwrow]").style.display = hasPw ? "flex" : "none";
+    if (!hasPw) q("[data-pwbox]").style.display = "none";
+    q("[data-namedit]").style.display = "none";
     // Signed in: release the gate. If the mandatory prompt was up, close it so they land in the calendar.
     if (_gated) { _gated = false; const x=q("[data-close]"); if(x) x.style.display=""; if (root.classList.contains("on")) close(); }
   } else {
