@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <!-- CSP: GitHub Pages can't set response headers, so lock down sources here. Inline script/style are
      required by this page's architecture; the win is restricting WHERE external code/data can come from. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://img.logo.dev https://assets.parqet.com https://www.gstatic.com https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://captivating-creation-production-3d49.up.railway.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firestore.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; font-src 'self'; frame-src https://earnings-radar-f398e.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://captivating-creation-production-3d49.up.railway.app https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firestore.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; font-src 'self'; frame-src https://earnings-radar-f398e.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
 <title>Earnings Radar — Earnings Calendar</title>
 <!-- Re-arm the 5s sign-in popup on every visit (clears auth.js's once-per-session guard). -->
 <script>try{sessionStorage.removeItem("er_auth_prompted");}catch(e){}</script>
@@ -81,8 +81,11 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .ebadge{font-size:11px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:99px;background:#20294d;color:var(--muted)}
   .ebadge.beat{background:rgba(52,211,153,.15);color:var(--green)}
   .ebadge.miss{background:rgba(248,113,113,.15);color:var(--red)}
-  .nrow{display:block;padding:13px 15px;background:var(--bg2);border:1px solid var(--border2);border-radius:13px;margin-bottom:8px;text-decoration:none;color:var(--text)}
+  .nrow{display:flex;gap:14px;align-items:flex-start;padding:13px 15px;background:var(--bg2);border:1px solid var(--border2);border-radius:13px;margin-bottom:8px;text-decoration:none;color:var(--text)}
   .nrow:hover{border-color:var(--blueLt)}
+  .nimg{width:110px;height:78px;flex:none;border-radius:9px;object-fit:cover;background:var(--card)}
+  .nbody{min-width:0;flex:1}
+  @media(max-width:520px){.nimg{width:86px;height:64px}}
   /* ── ticker popup tabs ── */
   .dtabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--border2);margin:12px 0 14px;scrollbar-width:none}
   .dtabs::-webkit-scrollbar{display:none}
@@ -1703,7 +1706,7 @@ async function renderNewsPage(){
   const el=document.getElementById('pageNews'); if(!el) return;
   if(!_newsCache) el.innerHTML=`<div class="ptitle"><h1>Market News</h1></div><div class="pempty">Loading headlines…</div>`;
   try{
-    if(!_newsCache||Date.now()-_newsTs>300000){
+    if(!_newsCache||Date.now()-_newsTs>60000){
       const r=await fetch(`${WORKER_BASE}/v1/marketnews?limit=40`,{cache:'no-store'});
       if(r.ok){ const j=await r.json(); _newsCache=j.news||[]; _newsTs=Date.now(); }
     }
@@ -1712,14 +1715,19 @@ async function renderNewsPage(){
       if(s<3600) return Math.max(1,Math.round(s/60))+'m ago';
       if(s<86400) return Math.round(s/3600)+'h ago';
       return Math.round(s/86400)+'d ago'; };
-    el.innerHTML=`<div class="ptitle"><h1>Market News</h1><p>Latest headlines · refreshes every few minutes</p></div><div class="psec">`
+    const okimg=u=>{ try{ return /^https:\/\//.test(u||''); }catch(e){ return false; } };
+    el.innerHTML=`<div class="ptitle"><h1>Market News</h1><p>Live headlines · updates every minute</p></div><div class="psec">`
       + _newsCache.map(a=>`<a class="nrow" href="${esc(a.url)}" target="_blank" rel="noopener">
+          ${okimg(a.image)?`<img class="nimg" src="${esc(a.image)}" alt="" loading="lazy" onerror="this.remove()">`:''}
+          <div class="nbody">
           <div class="nhead">${esc(a.headline)}</div>
           ${a.summary?`<div class="nsum">${esc(a.summary)}</div>`:''}
-          <div class="nmeta">${esc(a.source||'')}${a.datetime?' · '+ago(a.datetime):''}</div></a>`).join('')
+          <div class="nmeta">${esc(a.source||'')}${a.datetime?' · '+ago(a.datetime):''}</div></div></a>`).join('')
       + `</div>`;
   }catch(e){ if(!_newsCache||!_newsCache.length) el.innerHTML=`<div class="ptitle"><h1>Market News</h1></div><div class="pempty">Couldn't load news right now — try again in a minute.</div>`; }
 }
+// Keep the News page live: refetch every 60s while it's the active page and the tab is visible.
+setInterval(()=>{ if(PAGE==='news'&&document.visibilityState==='visible'){ _newsTs=0; renderNewsPage(); } },60000);
 ['pageEarn','pageMy'].forEach(id=>{ const el=document.getElementById(id);
   if(el) el.addEventListener('click',e=>{ const w=e.target.closest('[data-sym]');
     if(w) openDetail(w.getAttribute('data-sym'), w.getAttribute('data-date')||null); }); });
