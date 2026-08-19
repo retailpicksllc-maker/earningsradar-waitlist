@@ -1132,24 +1132,50 @@ async function loadDetDividends(sym){
     }).join('');
   }catch(e){ el.innerHTML='<div class="seclabel">Dividends</div><div class="divempty">Couldn\'t load dividends right now.</div>'; }
 }
-function _divChart(rows){
-  const data=rows.slice(0,16).reverse();                 // oldest -> newest
-  if(data.length<2) return '';
-  const W=520,H=150,P=24;
+let _dvData=[],_dvScrub=null;
+function _dvFmt(v){return '$'+(+v).toFixed(4).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');}
+function _divRender(){
+  const wrap=document.getElementById('dvWrap'); if(!wrap||_dvData.length<2) return;
+  const data=_dvData, n=data.length;
+  const W=520,H=150,P=10,PB=20;
   const vals=data.map(d=>+d.dividend||0);
-  const mx=(Math.max.apply(null,vals)*1.15)||1;
-  const step=(W-P*2)/data.length, bw=Math.min(34,step*0.62);
-  const bars=data.map((d,i)=>{
-    const h=Math.max(2,(+d.dividend/mx)*(H-P*2));
-    const x=P+i*step+(step-bw)/2, y=H-P-h;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--blueLt)" opacity="0.9"><title>$${(+d.dividend).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')} · ex ${d.date||''}</title></rect>`;
-  }).join('');
+  const mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals), rng=(mx-mn)||mx||1;
+  const X=i=>P+(i/(n-1))*(W-P*2), Y=v=>H-PB-((v-mn)/rng)*(H-PB-26);
+  const line=vals.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
   let labels='',seen={};
   data.forEach((d,i)=>{ const y=(d.date||'').slice(0,4);
     if(y&&!seen[y]){ seen[y]=1;
-      labels+=`<text x="${(P+i*step+step/2).toFixed(1)}" y="${H-7}" font-size="9" fill="var(--muted)" text-anchor="middle">${y}</text>`; }});
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;background:var(--card);border-radius:12px;margin-bottom:10px">`
-    +`<text x="${P}" y="15" font-size="10" fill="var(--muted)">Dividend per share, by payout</text>${bars}${labels}</svg>`;
+      labels+=`<text x="${X(i).toFixed(1)}" y="${H-6}" font-size="9" fill="var(--muted)" text-anchor="middle">${y}</text>`; }});
+  let cross='';
+  if(_dvScrub!=null&&_dvScrub>=0&&_dvScrub<n){
+    const i=_dvScrub;
+    cross=`<line x1="${X(i).toFixed(1)}" y1="4" x2="${X(i).toFixed(1)}" y2="${H-PB+4}" stroke="rgba(255,255,255,.35)" stroke-width="1"/>`+
+          `<circle cx="${X(i).toFixed(1)}" cy="${Y(vals[i]).toFixed(1)}" r="4.5" fill="var(--blueLt)" stroke="#fff" stroke-width="1.5"/>`;
+  }
+  let read;
+  if(_dvScrub!=null&&data[_dvScrub]){
+    const d=data[_dvScrub];
+    read=`<b>${_dvFmt(d.dividend)}</b> <span class="mutx">per share · ex ${esc(d.date||'')}${d.paymentDate?' · paid '+esc(d.paymentDate):''}</span>`;
+  }else{
+    const d=data[n-1], first=vals[0], chg=first?((vals[n-1]-first)/first*100):0, s=chg>=0?'+':'';
+    read=`<b>${_dvFmt(d.dividend)}</b> <span class="mutx">latest payout</span> <span style="color:${chg>=0?'var(--green)':'var(--red)'};font-size:12px">${s}${chg.toFixed(0)}% since ${(data[0].date||'').slice(0,4)}</span>`;
+  }
+  wrap.innerHTML=`<div style="font-size:13px;padding:2px 6px 8px">${read}</div>`+
+    `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:auto;display:block">`+
+    `<polygon points="${P},${H-PB} ${line} ${W-P},${H-PB}" fill="var(--blueLt)" opacity="0.10"/>`+
+    `<polyline points="${line}" fill="none" stroke="var(--blueLt)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
+    vals.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.5" fill="var(--blueLt)"/>`).join('')+
+    cross+labels+`</svg>`;
+  const toIdx=ev=>{const r=wrap.getBoundingClientRect();const fx=(ev.clientX-r.left)/r.width;return Math.max(0,Math.min(n-1,Math.round(fx*(n-1))));};
+  wrap.onpointermove=ev=>{_dvScrub=toIdx(ev);_divRender();};
+  wrap.onpointerdown=ev=>{_dvScrub=toIdx(ev);_divRender();};
+  wrap.onpointerleave=()=>{_dvScrub=null;_divRender();};
+}
+function _divChart(rows){
+  _dvData=rows.slice(0,16).reverse(); _dvScrub=null;   // oldest -> newest
+  if(_dvData.length<2) return '';
+  setTimeout(_divRender,0);
+  return `<div id="dvWrap" style="background:var(--card);border-radius:12px;padding:10px 8px 6px;margin-bottom:10px;touch-action:none;cursor:crosshair"></div>`;
 }
 function openDetail(sym,date){
   if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
