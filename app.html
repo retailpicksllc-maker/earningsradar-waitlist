@@ -1125,12 +1125,31 @@ async function loadDetDividends(sym){
     const j=await r.json(); const rows=(j.dividends||[]).filter(d=>d&&d.dividend!=null);
     if(!rows.length){ el.innerHTML='<div class="seclabel">Dividends</div><div class="divempty">No dividend history — this company doesn\'t currently pay one.</div>'; return; }
     const f=(rows[0].frequency||'').toLowerCase();
-    el.innerHTML='<div class="seclabel">Dividend history'+(f?` · ${esc(f)}`:'')+'</div>'+rows.map(d=>{
+    el.innerHTML='<div class="seclabel">Dividend history'+(f?` · ${esc(f)}`:'')+'</div>'+_divChart(rows)+rows.map(d=>{
       const amt=(+d.dividend).toFixed(4).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
       return `<div class="divrow"><div><b>$${amt}</b> <span class="mutx">per share</span></div>
         <div class="mutx">ex ${esc(d.date||'—')}${d.paymentDate?' · paid '+esc(d.paymentDate):''}</div></div>`;
     }).join('');
   }catch(e){ el.innerHTML='<div class="seclabel">Dividends</div><div class="divempty">Couldn\'t load dividends right now.</div>'; }
+}
+function _divChart(rows){
+  const data=rows.slice(0,16).reverse();                 // oldest -> newest
+  if(data.length<2) return '';
+  const W=520,H=150,P=24;
+  const vals=data.map(d=>+d.dividend||0);
+  const mx=(Math.max.apply(null,vals)*1.15)||1;
+  const step=(W-P*2)/data.length, bw=Math.min(34,step*0.62);
+  const bars=data.map((d,i)=>{
+    const h=Math.max(2,(+d.dividend/mx)*(H-P*2));
+    const x=P+i*step+(step-bw)/2, y=H-P-h;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--blueLt)" opacity="0.9"><title>$${(+d.dividend).toFixed(4).replace(/0+$/,'').replace(/\.$/,'')} · ex ${d.date||''}</title></rect>`;
+  }).join('');
+  let labels='',seen={};
+  data.forEach((d,i)=>{ const y=(d.date||'').slice(0,4);
+    if(y&&!seen[y]){ seen[y]=1;
+      labels+=`<text x="${(P+i*step+step/2).toFixed(1)}" y="${H-7}" font-size="9" fill="var(--muted)" text-anchor="middle">${y}</text>`; }});
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;background:var(--card);border-radius:12px;margin-bottom:10px">`
+    +`<text x="${P}" y="15" font-size="10" fill="var(--muted)">Dividend per share, by payout</text>${bars}${labels}</svg>`;
 }
 function openDetail(sym,date){
   if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
@@ -1176,6 +1195,7 @@ function openDetail(sym,date){
         <div class="statbox"><div class="l">Revenue estimate</div><div class="v">${fmtRevM(revE)}</div></div>
         <div class="statbox"><div class="l">Revenue actual</div><div class="v">${fmtRevM(revA)}</div><div class="s" style="color:${col(revS)}">${revS}</div></div>
       </div>
+      <div id="detAbout"></div>
       <div id="detInsight"></div>
       <div id="earnChart"></div>
       <div id="detHist"></div>
@@ -1183,7 +1203,6 @@ function openDetail(sym,date){
     <div class="dsec" data-ds="over">
       <div class="detchart" id="detChart"></div>
       <div class="statrow" id="detMeta" style="grid-template-columns:repeat(3,1fr)"></div>
-      <div id="detAbout"></div>
     </div>
     <div class="dsec" data-ds="news"><div id="detNews"></div></div>
     <div class="dsec" data-ds="fil"><div id="detFilings"></div></div>
