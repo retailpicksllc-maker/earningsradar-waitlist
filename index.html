@@ -846,7 +846,10 @@ document.querySelectorAll('.viewswitch .vbtn').forEach(function(b){ b.onclick=fu
     erTrack('mystocks_toggle',{on:_myOnly?1:0}); paint(); renderCalendar();
   };
   paint();
-  const wire=()=>{ if(window.erWatch){ erWatch.onChange(()=>{ paint(); renderCalendar(); loadLiveCalendar(); }); paint(); } else setTimeout(wire,400); };
+  const wire=()=>{ if(window.erWatch){ erWatch.onChange(()=>{ paint(); renderCalendar(); loadLiveCalendar();
+      // Watchlist arrives from Firestore a beat after load — repaint My Stocks so landing
+      // directly on #mystocks doesn't show the empty state to a user who has starred stocks.
+      if(typeof PAGE!=='undefined'&&PAGE==='my') renderMyPage(); }); paint(); } else setTimeout(wire,400); };
   wire();
 })();
 
@@ -1648,7 +1651,12 @@ function renderMyPage(){
   const t=iso(new Date());
   const rows=list.map(sym=>{
     const next=DATA.filter(r=>r.symbol===sym&&r.date>=t).sort((a,b)=>a.date<b.date?-1:1)[0];
+    const prev=DATA.filter(r=>r.symbol===sym&&r.date<t).sort((a,b)=>a.date<b.date?1:-1)[0];
     let when='No upcoming report date yet';
+    if(!next&&prev){
+      const pd=new Date(prev.date+'T12:00:00');
+      when=`Reported ${pd.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})} · next date TBA`;
+    }
     if(next){
       const d=new Date(next.date+'T12:00:00'); const sess=sessionOf(next.time);
       const days=Math.round((d-new Date(t+'T12:00:00'))/86400000);
@@ -1744,6 +1752,13 @@ window.addEventListener('popstate', e=>{
   } finally { window._fromPop=false; }
 });
 try{ history.replaceState({v:'root'},'',location.pathname+location.search+location.hash); }catch(e){}
+// Shared links land mid-session too: route whenever the hash changes, not only on first load.
+window.addEventListener('hashchange', ()=>{
+  if(window._fromPop) return;
+  const hl=(location.hash||'').toLowerCase();
+  const p=hl==='#earnings'?'earn':hl==='#mystocks'?'my':hl==='#news'?'news':(hl===''||hl==='#')?'cal':null;
+  if(p&&typeof PAGE!=='undefined'&&p!==PAGE) setPage(p);
+});
 (function openFromHash(){
   const h=(location.hash||'');
   const hl=h.toLowerCase();
