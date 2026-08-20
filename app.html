@@ -109,6 +109,11 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .dtab{background:none;border:none;color:var(--muted);font-weight:700;font-size:14px;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit}
   .dtab:hover{color:var(--text)}
   .dtab.on{color:var(--text);border-bottom-color:var(--blueLt)}
+  .callbox{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;margin:12px 0;display:block}
+  .callbox .clhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .callbox .clbl{font-weight:800;font-size:13px}
+  .callbox .clbody{max-height:220px;overflow:auto;font-size:13.5px;line-height:1.65;color:var(--text);margin-top:8px}
+  .callbox .livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin:0 3px;box-shadow:0 0 0 0 rgba(52,211,153,.5);animation:lbpulse 1.8s infinite}
   .ovsec{background:var(--card);border:1px solid var(--border2);border-radius:12px;margin-top:12px;overflow:hidden}
   .ovhead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-weight:800;font-size:13.5px;background:rgba(107,165,255,.06)}
   .ovrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--border2);font-size:13.5px}
@@ -1268,6 +1273,35 @@ function _divChart(rows){
   setTimeout(_divRender,0);
   return `<div id="dvWrap" style="background:var(--card);border-radius:12px;padding:10px 8px 6px;margin-bottom:10px;touch-action:none;cursor:crosshair"></div>`;
 }
+async function loadDetCall(sym){
+  const el=document.getElementById('detCall'); if(!el) return;
+  if(window._callTimer){ clearInterval(window._callTimer); window._callTimer=null; }
+  try{
+    const r=await fetch(`${WORKER_BASE}/v1/transcript/${encodeURIComponent(sym)}`,{cache:'no-store'});
+    if(!r.ok){ el.innerHTML=''; return; }
+    const j=await r.json();
+    const segs=j.segments||[];
+    const live=j.status==='live', pending=j.status==='pending';
+    if(!segs.length && !live && !pending){
+      // No transcript for this call — on report day, offer the company's own webcast instead.
+      const isToday=DATA.some(x=>x.symbol===sym&&x.date===iso(new Date()));
+      if(isToday){
+        try{
+          const o=await fetch(`${WORKER_BASE}/v1/overview/${encodeURIComponent(sym)}`,{cache:'no-store'});
+          if(o.ok){ const d=await o.json(); const w=((d.info||{}).website)||'';
+            if(/^https?:\/\//.test(w)) el.innerHTML=`<div class="callbox"><div class="clhead"><span class="clbl">📞 Earnings call today</span><a class="ovbtn" style="text-decoration:none" href="${esc(w)}" target="_blank" rel="noopener">Listen on the company's site ↗</a></div></div>`;
+          }
+        }catch(e){}
+      } else el.innerHTML='';
+      return;
+    }
+    const txt=segs.map(s=>esc(s.text)).join(' ');
+    el.innerHTML=`<div class="callbox"><div class="clhead"><span class="clbl">📞 Earnings call transcript${live?' <span class="livedot"></span> LIVE':''}</span><span class="mutx">${esc(j.date||'')}</span></div>`+
+      `<div class="clbody" id="clBody">${txt||'<span class="mutx">Waiting for the call to begin…</span>'}</div></div>`;
+    const b=document.getElementById('clBody'); if(b&&live) b.scrollTop=b.scrollHeight;
+    if(live||pending) window._callTimer=setInterval(()=>{ if(document.getElementById('detCall')) loadDetCall(sym); },20000);
+  }catch(e){}
+}
 function openDetail(sym,date){
   if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
   erTrack('ticker_click',{ticker:sym});
@@ -1313,6 +1347,7 @@ function openDetail(sym,date){
         <div class="statbox"><div class="l">Revenue actual</div><div class="v">${fmtRevM(revA)}</div><div class="s" style="color:${col(revS)}">${revS}</div></div>
       </div>
       <div id="detAbout"></div>
+      <div id="detCall"></div>
       <div id="detInsight"></div>
       <div id="earnChart"></div>
       <div id="detHist"></div>
@@ -1339,6 +1374,7 @@ function openDetail(sym,date){
   });
   loadName(sym);
   loadAbout(sym);
+  loadDetCall(sym);
   loadInsight(sym,reported);
   // Watchlist star
   const star=document.getElementById('detStar');
@@ -1547,7 +1583,7 @@ function loadInsight(sym,rep){
   _INSP=_INSP||fetch('insights.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
   _INSP.then(j=>{_INS=j||{};paint();});
 }
-function _closeDetailNow(){clearInterval(window._detTimer);$('#overlay').classList.remove('on');}
+function _closeDetailNow(){clearInterval(window._detTimer);if(window._callTimer){clearInterval(window._callTimer);window._callTimer=null;}$('#overlay').classList.remove('on');}
 function closeDetail(){ if(history.state&&history.state.v==='det'){ history.back(); } else { _closeDetailNow(); } }
 function _pushDay(d){ if(!window._fromPop){ try{ history.pushState({v:'day',d:d},'','#day-'+d); }catch(e){} } }
 $('#overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeDetail();});
