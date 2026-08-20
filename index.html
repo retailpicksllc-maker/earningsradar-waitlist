@@ -529,7 +529,12 @@ function weekLabel(o){return o===0?'This week':o===-1?'Last week':o===1?'Next we
 
 const MONO=['#2F6BFF','#1547C4','#3B82F6','#2563EB','#1D4ED8','#0EA5E9'];
 function monoColor(s){let h=0;for(const c of s)h=c.charCodeAt(0)+((h<<5)-h);return MONO[Math.abs(h)%MONO.length];}
-function logoURL(sym){return `https://img.logo.dev/ticker/${encodeURIComponent(sym)}?token=${LOGO_TOKEN}&retina=true`;}
+function logoURL(sym){
+  // Share-class tickers: logo.dev indexes BRK-B, not BRK.B — the dotted form returned an
+  // unrelated company's mark (BRK.B rendered as 'LSEG'). Normalise before asking.
+  const s=String(sym||'').toUpperCase().replace(/\./g,'-');
+  return `https://img.logo.dev/ticker/${encodeURIComponent(s)}?token=${LOGO_TOKEN}&retina=true`;
+}
 
 // ── Just Reported strip: /v1/live (real-time watcher actuals), refreshed every 30s ──
 (function(){
