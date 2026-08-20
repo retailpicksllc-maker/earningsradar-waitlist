@@ -186,6 +186,36 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .loading{text-align:center;color:var(--muted);padding:40px;font-size:14px}
 
   /* detail modal */
+  /* ── Right rail: today's earnings + live calls, persistent on every page ── */
+  .rail{position:fixed;right:0;top:57px;bottom:0;width:312px;z-index:40;overflow-y:auto;
+    background:var(--bg2);border-left:1px solid var(--border2);padding:16px 14px 40px;scrollbar-width:thin}
+  .rail h3{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 9px}
+  .rail h3:first-child{margin-top:0}
+  .railhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .railhead b{font-size:15px;font-weight:900;letter-spacing:-.2px}
+  .railhead span{font-size:12px;color:var(--muted)}
+  .rrow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:11px;background:var(--card);
+    border:1px solid var(--border2);margin-bottom:7px;cursor:pointer}
+  .rrow:hover{border-color:var(--blueLt)}
+  .rrow .tile{width:28px;height:28px;border-radius:8px;flex:none;font-size:12px}
+  .rrow .rmain{min-width:0;flex:1}
+  .rrow .rsym{font-weight:800;font-size:13.5px;line-height:1.2}
+  .rrow .rsub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rrow .rside{text-align:right;font-size:12px;font-weight:800;white-space:nowrap}
+  .rrow .rside .up{color:var(--green)}.rrow .rside .down{color:var(--red)}
+  .rlive{border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.07)}
+  .rdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none;
+    box-shadow:0 0 0 0 rgba(52,211,153,.55);animation:lbpulse 1.8s infinite}
+  .rempty{color:var(--muted);font-size:12.5px;padding:8px 2px 4px;line-height:1.5}
+  .railtoggle{display:none}
+  @media(min-width:1280px){ body{padding-right:312px} }
+  @media(max-width:1279px){
+    .rail{transform:translateX(100%);transition:transform .22s ease;box-shadow:-18px 0 50px rgba(0,0,0,.5)}
+    .rail.on{transform:none}
+    .railtoggle{display:flex;align-items:center;gap:7px;position:fixed;right:14px;bottom:16px;z-index:41;
+      background:var(--grad);color:#fff;border:0;border-radius:999px;padding:11px 16px;font-weight:800;
+      font-size:13px;cursor:pointer;box-shadow:0 10px 26px rgba(47,107,255,.45);font-family:inherit}
+  }
   .overlay{position:fixed;inset:0;background:rgba(4,6,15,.72);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
   .overlay.on{display:flex}
   .sheet{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:22px}
@@ -432,6 +462,9 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   <div id="pageNews" class="page" hidden></div>
   <div class="calnote" id="calNote"></div>
 </div>
+
+<aside class="rail" id="rail" aria-label="Today's earnings"></aside>
+<button class="railtoggle" id="railToggle" type="button">📡 Today</button>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
@@ -900,7 +933,7 @@ async function loadLiveCalendar(){
     const j=await r.json();
     const rows=Array.isArray(j)?j:(j.data||j.events||j.calendar||[]);
     const mapped=rows.map(mapWorkerRow).filter(x=>x.symbol&&x.date);
-    if(mapped.length){ DATA=mapped; renderCalendar();
+    if(mapped.length){ DATA=mapped; renderCalendar(); try{ renderRail(); }catch(e){}
       // A popup opened from a #TICKER deep link renders before this first fetch lands, so it
       // showed 'reports soon' with dashes while the recap below had the real numbers.
       // Re-open it once, silently, now that the event rows exist.
@@ -1799,6 +1832,75 @@ window.addEventListener('hashchange', ()=>{
     window._fromPop=true; try{ openSym(sym); } finally { window._fromPop=false; } }
 })();
 loadLiveCalendar();
+
+/* ══ Right rail — today's earnings + live calls, on every page ══════════════
+   Three sections: calls captured LIVE right now (from the call listener), names that
+   already reported today with their beat/miss, and who's still to come. Refreshes on
+   the same cadence as the board and pauses while the tab is hidden. */
+let _railCalls=[], _railTs=0;
+async function loadRailCalls(){
+  if(document.hidden) return;
+  if(Date.now()-_railTs < 25000) return;
+  _railTs=Date.now();
+  try{
+    const r=await fetch(`${WORKER_BASE}/v1/calls`,{cache:'no-store'});
+    if(!r.ok) return;
+    const j=await r.json();
+    _railCalls=Array.isArray(j.calls)?j.calls:[];
+  }catch(e){ /* offline: keep what we have */ }
+}
+function renderRail(){
+  const el=document.getElementById('rail'); if(!el) return;
+  const t=iso(new Date());
+  const todays=dedupClasses(DATA.filter(r=>r.date===t&&hasData(r)).sort((a,b)=>_mcap(b)-_mcap(a)));
+  const reported=todays.filter(r=>(r.row||{}).epsActual!=null);
+  const upcoming=todays.filter(r=>(r.row||{}).epsActual==null);
+  const live=_railCalls.filter(c=>c.status==='live');
+  const done=_railCalls.filter(c=>c.status!=='live'&&(c.segments||0)>0);
+  const nice=new Date().toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+
+  const row=(sym,sub,side,cls)=>`<div class="rrow ${cls||''}" data-sym="${esc(sym)}" data-date="${esc(t)}">
+      ${_pgTile(sym)}<div class="rmain"><div class="rsym">${esc(sym)}</div><div class="rsub">${sub}</div></div>
+      <div class="rside">${side||''}</div></div>`;
+
+  let h=`<div class="railhead"><b>Today's Earnings</b><span>${esc(nice)}</span></div>`;
+
+  h+=`<h3>${live.length?'<span class="rdot"></span> ':''}Live calls</h3>`;
+  h+= live.length
+    ? live.map(c=>row(c.ticker, `Transcribing · ${c.segments||0} segments`, 'LIVE', 'rlive')).join('')
+    : (done.length
+        ? done.slice(0,3).map(c=>row(c.ticker, `Call transcript ready`, '📄')).join('')
+        : `<div class="rempty">No call being captured right now. Transcripts appear here while a call is live.</div>`);
+
+  h+=`<h3>Reported today · ${reported.length}</h3>`;
+  h+= reported.length ? reported.slice(0,12).map(r=>{
+        const o=r.row||{}; const s=(o.eps!=null)?surprise(o.epsActual,o.eps):'';
+        const up=(o.eps!=null&&o.epsActual>=o.eps);
+        return row(r.symbol, `EPS ${fmtEps(o.epsActual)} vs ${fmtEps(o.eps)}`,
+          `<span class="${up?'up':'down'}">${o.eps!=null?(up?'BEAT':'MISS'):'—'}${s?' '+s:''}</span>`);
+      }).join('') : `<div class="rempty">Nothing has reported yet today.</div>`;
+
+  h+=`<h3>Still to come · ${upcoming.length}</h3>`;
+  h+= upcoming.length ? upcoming.slice(0,12).map(r=>{
+        const sess=sessionOf(r.time);
+        return row(r.symbol, sess==='bmo'?'Before open':sess==='amc'?'After close':'Time not specified',
+          `<span data-quote="${esc(r.symbol)}"></span>`);
+      }).join('') : `<div class="rempty">No more reports scheduled today.</div>`;
+
+  el.innerHTML=h;
+  upgradeLogos(el); pollPrices();
+}
+async function refreshRail(){ await loadRailCalls(); renderRail(); }
+document.addEventListener('click', e=>{
+  const tg=e.target.closest('#railToggle');
+  if(tg){ document.getElementById('rail').classList.toggle('on'); return; }
+  const r=e.target.closest('#rail .rrow');
+  if(r){ openDetail(r.getAttribute('data-sym'), r.getAttribute('data-date')||null); }
+});
+refreshRail();
+setInterval(refreshRail, 30000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshRail(); });
+
 // ── LIVE mode ────────────────────────────────────────────────────────────────
 // Prices tick every 5s on whatever view is showing (worker serves FMP-live behind a shared 5s
 // cache, so this is cheap no matter how many people watch). The calendar itself re-pulls every
