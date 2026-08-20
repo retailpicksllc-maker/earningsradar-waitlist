@@ -1671,20 +1671,10 @@ function renderEarnPage(){
   const el=document.getElementById('pageEarn'); if(!el) return;
   const t=iso(new Date());
   const todays=DATA.filter(r=>r.date===t);
-  const mkrow=r=>{
-    const o=r.row||{}; const rep=o.epsActual!=null;
-    const surp=(rep&&o.eps!=null)?surprise(o.epsActual,o.eps):'';
-    const badge=rep
-      ?`<span class="ebadge ${o.eps!=null?(o.epsActual>=o.eps?'beat':'miss'):''}">${o.eps!=null?(o.epsActual>=o.eps?'BEAT':'MISS'):'REPORTED'}${surp?' '+surp:''}</span>`
-      :`<span class="ebadge">DUE</span>`;
-    const nm=(r.name&&r.name!==r.symbol)?r.name:'';
-    return `<div class="erow" data-sym="${esc(r.symbol)}" data-date="${esc(r.date)}">${_pgTile(r.symbol)}
-      <div class="emain"><b>${esc(r.symbol)}</b><span class="enm">${esc(nm)}</span>
-        <div class="esub">EPS ${rep?fmtEps(o.epsActual):'—'} vs ${fmtEps(o.eps)} est · Rev ${(rep&&o.revenueActual!=null)?_fmtRevM2(o.revenueActual):'—'} vs ${_fmtRevM2(o.revenueEstimate)} est</div></div>
-      <div class="eside">${badge}<span class="epx" data-quote="${esc(r.symbol)}"></span></div></div>`;
-  };
+  // Same readable card rows as the day view: logo · live price · Revenue box · EPS box,
+  // with green/red surprise percentages instead of a cramped one-line summary.
   const sec=(label,list)=> list.length
-    ? `<div class="psec"><h2>${label}</h2>${list.map(mkrow).join('')}</div>`
+    ? `<div class="psec"><h2>${label}</h2>${list.map(r=>_lrow(r,false)).join('')}</div>`
     : `<div class="psec"><h2>${label}</h2><div class="pempty">No reports.</div></div>`;
   const bmo=todays.filter(r=>sessionOf(r.time)==='bmo');
   const amc=todays.filter(r=>sessionOf(r.time)==='amc');
@@ -1784,7 +1774,10 @@ async function renderNewsPage(){
 // Keep the News page live: refetch every 60s while it's the active page and the tab is visible.
 setInterval(()=>{ if(PAGE==='news'&&document.visibilityState==='visible'){ _newsTs=0; renderNewsPage(); } },60000);
 ['pageEarn','pageMy'].forEach(id=>{ const el=document.getElementById(id);
-  if(el) el.addEventListener('click',e=>{ const w=e.target.closest('[data-sym]');
+  if(el) el.addEventListener('click',e=>{
+    const bell=e.target.closest('.lbell');
+    if(bell){ const row=bell.closest('[data-sym]'); if(row&&window.erWatch){ const on=erWatch.toggle(row.getAttribute('data-sym')); bell.classList.toggle('on',on); } e.stopPropagation(); return; }
+    const w=e.target.closest('[data-sym]');
     if(w) openDetail(w.getAttribute('data-sym'), w.getAttribute('data-date')||null); }); });
 // ── Browser history: back button crosses pages, day views and popups; deep links work ──
 window.addEventListener('popstate', e=>{
