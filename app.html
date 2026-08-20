@@ -1504,10 +1504,20 @@ function renderDetHist(hist){
   const HCAP=5;   // show 5 quarters; the rest sit behind "Show more"
   el.innerHTML=`<div class="seclabel">Estimate vs actual — history</div><div class="htable">`+
     `<div class="r hh"><span class="q">Quarter</span><span>EPS est</span><span>EPS act</span><span>Rev est</span><span>Rev act</span></div>`+
-    hist.map((h,i)=>{const eS=surprise(h.epsAct,h.epsEst),rS=revSuspect(h.revEst,h.revAct,h.epsEst,h.epsAct)?'':surprise(h.revAct,h.revEst);
+    hist.map((h,i)=>{
+      // A quarter's actual is only shown when it's denominated the same way as its estimate.
+      // ADR feeds hand back revenue in the filing currency (Alibaba: RMB 243bn against a $35bn
+      // consensus) and EPS per ordinary share instead of per ADS. Printing those with a dollar
+      // sign is worse than printing nothing, so an implausible actual renders as an em dash.
+      const revBad=revSuspect(h.revEst,h.revAct,h.epsEst,h.epsAct);
+      const _er=(h.epsEst&&h.epsAct!=null)?Math.abs(numv(h.epsAct))/Math.abs(numv(h.epsEst)):null;
+      const _rr=(h.revEst&&h.revAct!=null)?Math.abs(numv(h.revAct))/Math.abs(numv(h.revEst)):null;
+      const epsBad=_er!=null&&(_er>=3||_er<=0.34)&&(_rr==null||(_rr>=0.6&&_rr<=1.7));
+      const epsActShown=epsBad?null:h.epsAct, revActShown=revBad?null:h.revAct;
+      const eS=epsBad?'':surprise(h.epsAct,h.epsEst), rS=revBad?'':surprise(h.revAct,h.revEst);
       return `<div class="r${i===0?' now':''}${i>=HCAP?' hhide':''}"><span class="q">${esc(h.qtr||'')}</span><span>${fmtEps(h.epsEst)}</span>`+
-        `<span style="color:${col(eS)}">${fmtEps(h.epsAct)}</span><span>${fmtRevM(h.revEst)}</span>`+
-        `<span style="color:${col(rS)}">${fmtRevM(h.revAct)}</span></div>`;}).join('')+
+        `<span style="color:${col(eS)}">${fmtEps(epsActShown)}</span><span>${fmtRevM(h.revEst)}</span>`+
+        `<span style="color:${col(rS)}">${fmtRevM(revActShown)}</span></div>`;}).join('')+
     (hist.length>HCAP?`<div class="hmore" onclick="this.parentElement.querySelectorAll('.hhide').forEach(x=>x.classList.remove('hhide'));this.remove()">Show ${hist.length-HCAP} more quarters</div>`:'')+`</div>`;
 }
 async function loadDetHistory(sym){
