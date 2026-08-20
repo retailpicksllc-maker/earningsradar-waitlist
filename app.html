@@ -140,7 +140,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .sresults .empty{padding:12px 13px;color:var(--muted);font-size:13px}
 
   /* calendar */
-  .calweek{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+  .calweek{display:grid;grid-template-columns:repeat(var(--wkcols,5),1fr);gap:18px}
   @media(max-width:1000px){.calweek{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:600px){.calweek{grid-template-columns:1fr}}
   .dayhead{text-align:center;margin-bottom:12px}
@@ -619,9 +619,15 @@ function renderGrid(){
   const from=iso(m),to=iso(sun);
   const rows=DATA.filter(r=>r.date>=from&&r.date<=to);
 
-  const days=['Mon','Tue','Wed','Thu','Fri']; const todayISO=iso(new Date());
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; const todayISO=iso(new Date());
+  // Weekend columns appear only when someone actually reports then — Berkshire (BRK.A/B) and
+  // several foreign banks file on Saturdays, and a Mon–Fri-only grid hid them entirely.
+  const _wkEnd=[5,6].filter(i=>{const dd=new Date(m); dd.setDate(m.getDate()+i);
+    return rows.some(r=>r.date===iso(dd)&&hasData(r));});
+  const _nDays=5+_wkEnd.length;
+  try{ $('#calGrid').style.setProperty('--wkcols', String(_nDays)); }catch(e){}
   let html='';
-  for(let i=0;i<5;i++){
+  for(let i=0;i<_nDays;i++){
     const d=new Date(m); d.setDate(m.getDate()+i); const dISO=iso(d);
     const mcapVal=r=>{const n=parseFloat(String(r.marketCap||'').replace(/[$,]/g,''));return isFinite(n)?n:0;};
     let list=rows.filter(r=>r.date===dISO && hasData(r));
@@ -772,7 +778,7 @@ function renderList(){
   $('#wkRange').textContent=`${fmtShort(m)} – ${fmtShort(sun)}`;
   $('#wkTitle').textContent=`Week of ${m.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
   const from=iso(m),to=iso(sun); const rows=DATA.filter(r=>r.date>=from&&r.date<=to);
-  const days=['Mon','Tue','Wed','Thu','Fri']; const todayISO=iso(new Date());
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; const todayISO=iso(new Date());
   const LCAP=8;
   const sess=(items,label)=>{
     if(!items.length) return '';
@@ -781,7 +787,7 @@ function renderList(){
     return `<div class="lsess"><div class="lsesshead">${label}</div>${rowsHtml}${more}</div>`;
   };
   let html='';
-  for(let i=0;i<5;i++){
+  for(let i=0;i<7;i++){          // Sat/Sun included; empty days are skipped just below
     const d=new Date(m); d.setDate(m.getDate()+i); const dISO=iso(d);
     let list=rows.filter(r=>r.date===dISO && hasData(r));
     if(!list.length) continue;
