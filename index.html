@@ -900,7 +900,19 @@ async function loadLiveCalendar(){
     const j=await r.json();
     const rows=Array.isArray(j)?j:(j.data||j.events||j.calendar||[]);
     const mapped=rows.map(mapWorkerRow).filter(x=>x.symbol&&x.date);
-    if(mapped.length){ DATA=mapped; renderCalendar(); }
+    if(mapped.length){ DATA=mapped; renderCalendar();
+      // A popup opened from a #TICKER deep link renders before this first fetch lands, so it
+      // showed 'reports soon' with dashes while the recap below had the real numbers.
+      // Re-open it once, silently, now that the event rows exist.
+      try{
+        const _ov=document.getElementById('overlay');
+        if(_ov&&_ov.classList.contains('on')&&window._detSym&&!window._detHydrated){
+          const _s=window._detSym, _hit=DATA.find(r=>r.symbol===_s);
+          if(_hit){ window._detHydrated=true; window._fromPop=true;
+            try{ openDetail(_hit.symbol,_hit.date); } finally { window._fromPop=false; } }
+        }
+      }catch(e){}
+    }
   }catch(e){ /* keep the baked snapshot on error */ }
 }
 
@@ -1234,6 +1246,7 @@ async function loadDetCall(sym){
   }catch(e){}
 }
 function openDetail(sym,date){
+  window._detSym=sym; if(!window._fromPop) window._detHydrated=false;
   if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
   erTrack('ticker_click',{ticker:sym});
   _recAdd(sym);
