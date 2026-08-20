@@ -992,7 +992,7 @@ async function loadDetailQuote(sym){
     if(!r.ok) return; const q=await r.json();
     if(!q||q.last==null) return;
     const f=v=>(+v).toFixed(2), phase=(q.market_state||marketPhase());
-    const post=(phase==='after'||phase==='post'||phase==='pre');
+    const post=(phase!=='live'&&phase!=='open');   // after-hours, overnight, pre-market, weekends: split close vs extended print
     // Top = regular-session close. Worker `close` when present; else `last` (= the close once the session ends).
     const close=q.close!=null?+q.close:+q.last;
     // Top line = the REGULAR session move (close vs prev close). After hours, change_pct from the
