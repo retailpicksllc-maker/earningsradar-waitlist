@@ -788,7 +788,7 @@ function _lrow(r,hide){
   return `<div class="lrow${hide?' lhide':''}" data-sym="${esc(r.symbol)}" data-date="${r.date}">`+
     `<div class="lco"><div class="tile mono" style="background:${monoColor(r.symbol)}" data-logo="${esc(r.symbol)}">${init}</div><div><div class="lt">${esc(r.symbol)}</div><div class="lm">${t}</div></div></div>`+
     `<div class="lpx" data-quote="${esc(r.symbol)}"><span class="lprice">—</span></div>`+
-    _lbox('Revenue',fmtRevM(rShow),surprise(rAct,rEst))+
+    _lbox('Revenue',fmtRevM(rShow),revSurp(o))+
     _lbox('EPS',fmtEps(eShow),epsSurp(o))+
     `<div class="lbell${(window.erWatch&&erWatch.has(r.symbol))?' on':''}" title="Watch ${esc(r.symbol)}">🔔</div></div>`;
 }
@@ -986,6 +986,33 @@ function unitSuspect(o){
 }
 // EPS surprise for a calendar row, blanked when the units don't line up.
 function epsSurp(o){ return unitSuspect(o) ? '' : surprise(numv(o&&o.epsActual), numv(o&&o.eps)); }
+// Revenue surprise, blanked when the percentage would be meaningless rather than informative:
+//  • the actual is in the company's local currency while the consensus is USD (ZTO x6.8 CNY,
+//    KOF x17.6 MXN, Nomura-class names x158 JPY) — EPS staying flat proves sales didn't 7x;
+//  • the estimate and the actual measure different things (Sun Life net vs gross revenue,
+//    Enbridge revenue including commodity costs vs the adjusted figure analysts model);
+//  • the estimate is a rounding artifact on a pre-revenue company (Allogene: $0.0M estimate,
+//    $4.6M actual reads as "+185,600%", which tells a reader nothing).
+// In all three cases we still show both dollar figures — we just don't attach a percentage.
+const REV_EST_FLOOR_M = 5;      // revenue figures on rows are in $ millions
+function revSuspect(re_, ra, ee, ea){
+  re_=numv(re_); ra=numv(ra); ee=numv(ee); ea=numv(ea);
+  if(re_==null||ra==null) return false;
+  if(Math.abs(re_) < REV_EST_FLOOR_M) return true;          // denominator artifact
+  if(!re_) return true;
+  const rr=Math.abs(ra)/Math.abs(re_);
+  if(rr>=3 || rr<=0.34) return true;                        // implausible for one quarter
+  if(ee!=null&&ea!=null&&ee){                               // EPS flat but sales "exploded"
+    const er=Math.abs(ea)/Math.abs(ee);
+    if(er>=0.7&&er<=1.4&&(rr>=2.5||rr<=0.4)) return true;
+  }
+  return false;
+}
+function revSurp(o){
+  if(!o) return '';
+  return revSuspect(o.revenueEstimate,o.revenueActual,o.eps,o.epsActual)
+    ? '' : surprise(numv(o.revenueActual), numv(o.revenueEstimate));
+}
 // ── Detail view: live price header (+ after-hours) and a 30-day chart. ──
 function marketPhase(){
   const et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
@@ -1329,7 +1356,7 @@ function openDetail(sym,date){
   const reported=(epsA!=null)||(revA!=null)||pastDate;
   if(reported){if(epsE==null)epsE=numv(h0.epsEst);if(epsA==null)epsA=numv(h0.epsAct);if(revE==null)revE=numv(h0.revEst);if(revA==null)revA=numv(h0.revAct);}
   const _sus=unitSuspect({eps:epsE,epsActual:epsA,revenueEstimate:revE,revenueActual:revA});
-  const epsS=_sus?'':surprise(epsA,epsE), revS=surprise(revA,revE);
+  const epsS=_sus?'':surprise(epsA,epsE), revS=revSuspect(revE,revA,epsE,epsA)?'':surprise(revA,revE);
   const news=(NEWS[sym]||[]).slice(0,5);
   const initial=(sym[0]||'?').toUpperCase();
   $('#sheet').innerHTML=`
@@ -1477,7 +1504,7 @@ function renderDetHist(hist){
   const HCAP=5;   // show 5 quarters; the rest sit behind "Show more"
   el.innerHTML=`<div class="seclabel">Estimate vs actual — history</div><div class="htable">`+
     `<div class="r hh"><span class="q">Quarter</span><span>EPS est</span><span>EPS act</span><span>Rev est</span><span>Rev act</span></div>`+
-    hist.map((h,i)=>{const eS=surprise(h.epsAct,h.epsEst),rS=surprise(h.revAct,h.revEst);
+    hist.map((h,i)=>{const eS=surprise(h.epsAct,h.epsEst),rS=revSuspect(h.revEst,h.revAct,h.epsEst,h.epsAct)?'':surprise(h.revAct,h.revEst);
       return `<div class="r${i===0?' now':''}${i>=HCAP?' hhide':''}"><span class="q">${esc(h.qtr||'')}</span><span>${fmtEps(h.epsEst)}</span>`+
         `<span style="color:${col(eS)}">${fmtEps(h.epsAct)}</span><span>${fmtRevM(h.revEst)}</span>`+
         `<span style="color:${col(rS)}">${fmtRevM(h.revAct)}</span></div>`;}).join('')+
