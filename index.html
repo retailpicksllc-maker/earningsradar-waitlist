@@ -995,7 +995,10 @@ async function loadDetailQuote(sym){
     const post=(phase==='after'||phase==='post'||phase==='pre');
     // Top = regular-session close. Worker `close` when present; else `last` (= the close once the session ends).
     const close=q.close!=null?+q.close:+q.last;
-    const cdp=q.change_pct!=null?+q.change_pct:(q.prev_close?(close-+q.prev_close)/+q.prev_close*100:0);
+    // Top line = the REGULAR session move (close vs prev close). After hours, change_pct from the
+    // worker blends the AH move in, so recompute from close when we have it.
+    const cdp=(post&&q.close!=null&&q.prev_close)?(close-+q.prev_close)/+q.prev_close*100
+      :(q.change_pct!=null?+q.change_pct:(q.prev_close?(close-+q.prev_close)/+q.prev_close*100:0));
     const cUp=cdp>=0, cs=cUp?'+':'';
     const topLbl=post?'At close':({live:'Live',open:'Live',pre:'Pre-market',closed:'At close'}[phase]||'At close');
     let html=`<div class="px">$${f(close)}</div>`+
