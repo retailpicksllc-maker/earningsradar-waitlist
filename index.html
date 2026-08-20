@@ -728,6 +728,21 @@ function dedupClasses(list){
     m=sym.match(/^([A-Z]{2,})([A-Z])$/); if(m && DUAL_NODOT[m[1]] && present.has(m[1])) return m[1];
     return sym;
   }
+  // Preferred/tracking lines (HOV vs HOVNP) carry the same numbers as the common stock and
+  // showed up as a second row for the same company. Drop the longer symbol when a shorter one
+  // in the same list is its prefix AND the reported figures are identical.
+  const _all=[...list].map(r=>[String(r.symbol||'').toUpperCase(), r]);
+  const _drop=new Set();
+  for(const [s,r] of _all){
+    if(s.length<5) continue;
+    for(const [o,or_] of _all){
+      if(o!==s && o.length>=3 && s.startsWith(o)){
+        const a=r.row||{}, b=or_.row||{};
+        if(a.epsActual===b.epsActual && a.revenueActual===b.revenueActual){ _drop.add(s); break; }
+      }
+    }
+  }
+  if(_drop.size) list=list.filter(r=>!_drop.has(String(r.symbol||'').toUpperCase()));
   const seenSym=new Set(), seenRoot=new Set(), out=[];
   for(const r of list){
     const s=String(r.symbol||'').toUpperCase();
@@ -774,7 +789,7 @@ function _lrow(r,hide){
     `<div class="lco"><div class="tile mono" style="background:${monoColor(r.symbol)}" data-logo="${esc(r.symbol)}">${init}</div><div><div class="lt">${esc(r.symbol)}</div><div class="lm">${t}</div></div></div>`+
     `<div class="lpx" data-quote="${esc(r.symbol)}"><span class="lprice">—</span></div>`+
     _lbox('Revenue',fmtRevM(rShow),surprise(rAct,rEst))+
-    _lbox('EPS',fmtEps(eShow),surprise(eAct,eEst))+
+    _lbox('EPS',fmtEps(eShow),epsSurp(o))+
     `<div class="lbell${(window.erWatch&&erWatch.has(r.symbol))?' on':''}" title="Watch ${esc(r.symbol)}">🔔</div></div>`;
 }
 function renderDay(dISO){
@@ -954,6 +969,23 @@ function numv(v){if(v===null||v===undefined||v==='')return null;const n=+String(
 function fmtEps(v){const n=numv(v);return n===null?'—':`$${n.toFixed(2)}`;}
 function fmtRevM(v){let m=numv(v);if(m===null)return '—';return m>=1000?`$${(m/1000).toFixed(1)}B`:`$${m.toFixed(0)}M`;}
 function surprise(a,e){if(a==null||e==null||e===''||e==0)return '';const p=((a-e)/Math.abs(e))*100;if(!isFinite(p))return '';if(p>300)return '+300%+';if(p<-300)return '-300%+';return `${p>=0?'+':''}${p.toFixed(1)}%`;}
+// ADR unit mismatch: some foreign issuers report EPS per ADS while the consensus is per ordinary
+// share (or vice versa) — NetEase showed a "+300% beat", Alibaba a "-92% miss", both on revenue
+// that was dead in line. Revenue is the tell: no company multiplies or guts EPS several-fold on
+// flat sales. When that pattern appears we show both EPS figures and simply don't assert a
+// beat/miss we can't stand behind.
+function unitSuspect(o){
+  if(!o) return false;
+  const ee=numv(o.eps), ea=numv(o.epsActual), re_=numv(o.revenueEstimate), ra=numv(o.revenueActual);
+  if(ee==null||ea==null||re_==null||ra==null) return false;
+  if(!ee||!re_) return false;
+  const rr=Math.abs(ra)/Math.abs(re_);
+  if(rr<0.7||rr>1.4) return false;                       // revenue not in line -> a real swing
+  const er=Math.abs(ea)/Math.abs(ee);
+  return er>=3 || er<=0.34;
+}
+// EPS surprise for a calendar row, blanked when the units don't line up.
+function epsSurp(o){ return unitSuspect(o) ? '' : surprise(numv(o&&o.epsActual), numv(o&&o.eps)); }
 // ── Detail view: live price header (+ after-hours) and a 30-day chart. ──
 function marketPhase(){
   const et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
@@ -1296,7 +1328,8 @@ function openDetail(sym,date){
   if(revE==null&&typeof REV_EST!=='undefined'&&REV_EST[sym])revE=numv(REV_EST[sym]['0q']!=null?REV_EST[sym]['0q']:Object.values(REV_EST[sym])[0]);
   const reported=(epsA!=null)||(revA!=null)||pastDate;
   if(reported){if(epsE==null)epsE=numv(h0.epsEst);if(epsA==null)epsA=numv(h0.epsAct);if(revE==null)revE=numv(h0.revEst);if(revA==null)revA=numv(h0.revAct);}
-  const epsS=surprise(epsA,epsE), revS=surprise(revA,revE);
+  const _sus=unitSuspect({eps:epsE,epsActual:epsA,revenueEstimate:revE,revenueActual:revA});
+  const epsS=_sus?'':surprise(epsA,epsE), revS=surprise(revA,revE);
   const news=(NEWS[sym]||[]).slice(0,5);
   const initial=(sym[0]||'?').toUpperCase();
   $('#sheet').innerHTML=`
@@ -1874,10 +1907,11 @@ function renderRail(){
 
   h+=`<h3>Reported today · ${reported.length}</h3>`;
   h+= reported.length ? reported.slice(0,12).map(r=>{
-        const o=r.row||{}; const s=(o.eps!=null)?surprise(o.epsActual,o.eps):'';
+        const o=r.row||{}; const sus=unitSuspect(o); const s=sus?'':((o.eps!=null)?surprise(o.epsActual,o.eps):'');
         const up=(o.eps!=null&&o.epsActual>=o.eps);
         return row(r.symbol, `EPS ${fmtEps(o.epsActual)} vs ${fmtEps(o.eps)}`,
-          `<span class="${up?'up':'down'}">${o.eps!=null?(up?'BEAT':'MISS'):'—'}${s?' '+s:''}</span>`);
+          sus ? '<span class="rsub">reported</span>'
+              : `<span class="${up?'up':'down'}">${o.eps!=null?(up?'BEAT':'MISS'):'—'}${s?' '+s:''}</span>`);
       }).join('') : `<div class="rempty">Nothing has reported yet today.</div>`;
 
   h+=`<h3>Still to come · ${upcoming.length}</h3>`;
