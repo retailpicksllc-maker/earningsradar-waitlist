@@ -926,6 +926,7 @@ function mapWorkerRow(w){
   const mktCap = cap ? '$'+Math.round(cap*1e6) : '';
   const row = {
     symbol:w.ticker, time,
+    foreign: !!(w.country && String(w.country).toUpperCase()!=='US'),
     eps:(w.eps_est!=null?w.eps_est:null), epsActual:(w.eps_act!=null?w.eps_act:null),
     revenueEstimate:(w.rev_est!=null?w.rev_est/1e6:null), revenueActual:(w.rev_act!=null?w.rev_act/1e6:null),
     marketCap:mktCap, name:w.ticker, status:w.status||'',
@@ -976,6 +977,10 @@ function surprise(a,e){if(a==null||e==null||e===''||e==0)return '';const p=((a-e
 // beat/miss we can't stand behind.
 function unitSuspect(o){
   if(!o) return false;
+  // Only foreign issuers suffer the per-ADS/per-share and filing-currency mix-ups. A US company
+  // can genuinely miss or beat by several times (Datadog -79% on charges, Alphabet +217% on an
+  // investment gain) and those percentages are real — never suppress them.
+  if(!o.foreign) return false;
   const ee=numv(o.eps), ea=numv(o.epsActual), re_=numv(o.revenueEstimate), ra=numv(o.revenueActual);
   if(ee==null||ea==null||re_==null||ra==null) return false;
   if(!ee||!re_) return false;
