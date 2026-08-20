@@ -1674,7 +1674,7 @@ function renderEarnPage(){
   // Same readable card rows as the day view: logo · live price · Revenue box · EPS box,
   // with green/red surprise percentages instead of a cramped one-line summary.
   const sec=(label,list)=> list.length
-    ? `<div class="psec"><h2>${label}</h2>${list.map(r=>_lrow(r,false)).join('')}</div>`
+    ? `<div class="psec"><h2>${label}</h2><div class="calist" style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">${list.map(r=>_lrow(r,false)).join('')}</div></div>`
     : `<div class="psec"><h2>${label}</h2><div class="pempty">No reports.</div></div>`;
   const bmo=todays.filter(r=>sessionOf(r.time)==='bmo');
   const amc=todays.filter(r=>sessionOf(r.time)==='amc');
