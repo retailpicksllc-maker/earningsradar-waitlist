@@ -255,6 +255,9 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .wstar{border:0;background:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;padding:4px 6px;transition:.15s}
   .wstar:hover{color:var(--amber)}
   .wstar.on{color:var(--amber)}
+  .clturn{margin:0 0 12px}
+  .clturn:last-child{margin-bottom:0}
+  .clwho{font-weight:700;font-size:12.5px;color:var(--blueLt);margin-bottom:2px}
   .wshare{border:0;background:none;color:var(--muted);font-size:19px;cursor:pointer;line-height:1;padding:5px 7px;transition:.15s}
   .wshare:hover{color:var(--blueLt)}
   .shwrap{position:relative}
@@ -1348,11 +1351,21 @@ async function loadDetCall(sym){
       } else el.innerHTML='';
       return;
     }
-    const txt=segs.map(s=>esc(s.text)).join(' ');
-    el.innerHTML=`<div class="callbox"><div class="clhead"><span class="clbl">📞 Earnings call transcript${live?' <span class="livedot"></span> LIVE':''}</span><span class="mutx">${esc(j.date||'')}</span></div>`+
-      `<div class="clbody" id="clBody">${txt||'<span class="mutx">Waiting for the call to begin…</span>'}</div></div>`;
+    // Archived transcripts arrive speaker-attributed; a live capture is one undifferentiated
+    // stream. Render each accordingly rather than flattening the good case to match the poor one.
+    const body = segs.some(x=>x.speaker)
+      ? segs.map(x=>{
+          const who=esc(x.speaker||''), role=x.title?` <span class="mutx">${esc(x.title)}</span>`:'';
+          return `<div class="clturn"><div class="clwho">${who}${role}</div><div>${esc(x.text)}</div></div>`;
+        }).join('')
+      : segs.map(x=>esc(x.text)).join(' ');
+    const label = live ? '📞 Earnings call transcript <span class="livedot"></span> LIVE'
+                       : (j.status==='archived' ? '📞 Earnings call transcript' : '📞 Earnings call');
+    const meta = [j.quarter||'', j.date||''].filter(Boolean).join(' · ');
+    el.innerHTML=`<div class="callbox"><div class="clhead"><span class="clbl">${label}</span><span class="mutx">${esc(meta)}</span></div>`+
+      `<div class="clbody" id="clBody">${body||'<span class="mutx">Waiting for the call to begin…</span>'}</div></div>`;
     const b=document.getElementById('clBody'); if(b&&live) b.scrollTop=b.scrollHeight;
-    if(live||pending) window._callTimer=setInterval(()=>{ if(document.getElementById('detCall')) loadDetCall(sym); },20000);
+    if(live) window._callTimer=setInterval(()=>{ if(document.getElementById('detCall')) loadDetCall(sym); },20000);
   }catch(e){}
 }
 // ── Share: a result card plus a caption the user would actually post ──────────
