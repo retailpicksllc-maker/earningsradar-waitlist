@@ -1355,7 +1355,10 @@ async function loadDetCall(sym){
     // stream. Render each accordingly rather than flattening the good case to match the poor one.
     const body = segs.some(x=>x.speaker)
       ? segs.map(x=>{
-          const who=esc(x.speaker||''), role=x.title?` <span class="mutx">${esc(x.title)}</span>`:'';
+          const who=esc(x.speaker||'');
+          // Alpha Vantage repeats the name in the title for unnamed roles ("Operator"/"Operator").
+          const sameAsName = (x.title||'').trim().toLowerCase() === (x.speaker||'').trim().toLowerCase();
+          const role = (x.title && !sameAsName) ? ` <span class="mutx">${esc(x.title)}</span>` : '';
           return `<div class="clturn"><div class="clwho">${who}${role}</div><div>${esc(x.text)}</div></div>`;
         }).join('')
       : segs.map(x=>esc(x.text)).join(' ');
