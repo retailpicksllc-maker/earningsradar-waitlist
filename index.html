@@ -1987,9 +1987,14 @@ window.addEventListener('hashchange', ()=>{
   if(window._fromPop) return;
   const hl=(location.hash||'').toLowerCase();
   const p=hl==='#earnings'?'earn':hl==='#mystocks'?'my':hl==='#news'?'news':(hl===''||hl==='#')?'cal':null;
-  if(p&&typeof PAGE!=='undefined'&&p!==PAGE) setPage(p);
+  if(p&&typeof PAGE!=='undefined'&&p!==PAGE){ setPage(p); return; }
+  // A ticker or day hash is not a page hash, so `p` is null and the branch above does
+  // nothing. Without this, /#NVDA opened the popup on a cold load but silently did nothing
+  // when the hash changed on a page already open — which is every in-page link, and every
+  // press of the back button between two tickers.
+  if(p===null) openFromHash();
 });
-(function openFromHash(){
+function openFromHash(){
   const h=(location.hash||'');
   const hl=h.toLowerCase();
   if(hl==='#earnings'||hl==='#mystocks'||hl==='#news'){
@@ -2003,7 +2008,8 @@ window.addEventListener('hashchange', ()=>{
   m=h.match(/^#([A-Za-z][A-Za-z0-9.\-]{0,9})$/);
   if(m){ const sym=m[1].toUpperCase(); try{history.replaceState({v:'det',sym:sym,date:null,day:null},'');}catch(e){}
     window._fromPop=true; try{ openSym(sym); } finally { window._fromPop=false; } }
-})();
+}
+openFromHash();
 loadLiveCalendar();
 
 /* ══ Right rail — today's earnings + live calls, on every page ══════════════
