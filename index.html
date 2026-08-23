@@ -1659,9 +1659,18 @@ async function loadDetNews(sym){
     const r=await fetch(`${WORKER_BASE}/v1/news/${encodeURIComponent(sym)}`,{cache:'no-store'});
     if(!r.ok) return; const j=await r.json();
     const items=(j&&j.news)?j.news:[]; if(!items.length) return;
-    const fd=ts=>{try{const n=+ts;return new Date((''+ts).length>=13?n:n*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch(e){return '';}};
-    el.innerHTML=`<div class="seclabel">Latest news</div><div class="news">`+
-      items.slice(0,6).map(n=>`<a href="${esc(safeURL(n.url))}" target="_blank" rel="noopener"><div class="t">${esc(n.headline||n.title||'')}</div><div class="m">${esc(n.source||'')}${n.datetime?' · '+fd(n.datetime):''}</div></a>`).join('')+`</div>`;
+    // rank 2 = the company is the subject; anything less merely mentions it. Vendors tag both
+    // the same way, which is how Coca-Cola's news tab filled with generic dividend listicles.
+    const fd=ts=>{try{ if(typeof ts==='string'&&ts.includes('-')) return new Date(ts.replace(' ','T')).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const n=+ts;return new Date((''+ts).length>=13?n:n*1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch(e){return '';}};
+    const card=n=>`<a href="${esc(safeURL(n.url))}" target="_blank" rel="noopener"><div class="t">${esc(n.headline||n.title||'')}</div><div class="m">${esc(n.source||'')}${n.datetime?' · '+fd(n.datetime):''}</div></a>`;
+    const about=items.filter(n=>n.rank===2).slice(0,6);
+    const rest =items.filter(n=>n.rank!==2).slice(0,3);
+    let html='';
+    if(about.length) html+=`<div class="seclabel">Latest news</div><div class="news">`+about.map(card).join('')+`</div>`;
+    else html+=`<div class="seclabel">Latest news</div><div class="rempty">No ${esc(sym)}-specific news in the last few weeks.</div>`;
+    if(rest.length) html+=`<div class="seclabel" style="margin-top:14px">Also mentions ${esc(sym)}</div><div class="news">`+rest.map(card).join('')+`</div>`;
+    el.innerHTML=html;
   }catch(e){ /* leave empty on error */ }
 }
 // SEC filings — live from the worker's /v1/filings (SEC EDGAR). Material forms only.
@@ -2044,12 +2053,15 @@ function renderRail(){
 
   let h=`<div class="railhead"><b>Today's Earnings</b><span>${esc(nice)}</span></div>`;
 
-  h+=`<h3>${live.length?'<span class="rdot"></span> ':''}Live calls</h3>`;
+  // Live capture never worked — six calls, zero segments — and the listener is shut down.
+  // Live transcript feeds (Quartr, FMP Ultimate) are all paid, so this promises something the
+  // product cannot deliver. Archived transcripts DO land, so say that instead of pretending.
+  h+=`<h3>${live.length?'<span class="rdot"></span> Live calls':'Call transcripts'}</h3>`;
   h+= live.length
     ? live.map(c=>row(c.ticker, `Transcribing · ${c.segments||0} segments`, 'LIVE', 'rlive')).join('')
     : (done.length
         ? done.slice(0,3).map(c=>row(c.ticker, `Call transcript ready`, '📄')).join('')
-        : `<div class="rempty">No call being captured right now. Transcripts appear here while a call is live.</div>`);
+        : `<div class="rempty">Transcripts are posted after each call — open any reported ticker to read one.</div>`);
 
   h+=`<h3>Reported today · ${reported.length}</h3>`;
   h+= reported.length ? reported.slice(0,12).map(r=>{
