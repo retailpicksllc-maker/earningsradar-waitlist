@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Earnings Radar — Free Earnings Calendar, Transcripts &amp; Alerts</title>
 <meta name="description" content="A free earnings calendar with same-day call transcripts, five years of history, instant result alerts and AI summaries. No brokerage. No paywall." />
+<script>
+/* Every share card ever posted links to earningsradar.org/#TICKER, and the old site opened
+   the app at "/". Now "/" is the landing page, so those links must be forwarded or they land
+   on marketing copy with no ticker. Runs before paint; #features and #pricing are this page's
+   own anchors and must not be forwarded. */
+(function(){
+  var h = location.hash || '';
+  if (!h || h === '#') return;
+  var k = h.slice(1).toLowerCase();
+  if (k === 'features' || k === 'pricing') return;
+  if (/^(day-\d{4}-\d{2}-\d{2}|earnings|mystocks|news|[a-z][a-z0-9.\-]{0,9})$/.test(k)) {
+    location.replace('/app.html' + h);
+  }
+})();
+</script>
 <link rel="icon" href="/favicon.ico" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Earnings Radar — never miss an earnings date again" />
@@ -138,17 +153,17 @@
 
 <header>
  <div class="wrap nav">
-  <a class="brand" href="/">
+  <a class="brand" href="/app.html">
    <svg class="mark" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
      <path class="l" d="M60 6 C2 42 2 108 60 144 Z"/><path class="r" d="M60 6 C118 42 118 108 60 144 Z"/></svg>
    <span class="bname">earnings&thinsp;<span class="b">radar</span></span>
   </a>
   <div class="links">
-   <a href="/">Calendar</a><a href="/#earnings">Earnings</a>
-   <a href="/#mystocks">My Stocks</a><a href="/#news">News</a>
+   <a href="/app.html">Calendar</a><a href="/app.html#earnings">Earnings</a>
+   <a href="/app.html#mystocks">My Stocks</a><a href="/app.html#news">News</a>
   </div>
   <div class="sp"></div>
-  <a class="btn sm" href="/">Open the calendar</a>
+  <a class="btn sm" href="/app.html">Open the calendar</a>
  </div>
 </header>
 
@@ -158,7 +173,7 @@
   <p>A live earnings calendar for every US-listed company — with same-day call transcripts,
      five years of history, and an alert the moment the numbers land.</p>
   <div class="heroBtns">
-    <a class="btn" href="/">Open the Earnings Calendar</a>
+    <a class="btn" href="/app.html">Open the Earnings Calendar</a>
     <a class="btn ghost" href="#features">See what's inside</a>
   </div>
 </section>
@@ -168,20 +183,20 @@
     <div class="grid9"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <h3>Earnings this week</h3>
     <p>The week's key reporters at a glance, biggest companies first.</p>
-    <a class="more" href="/">See this week's calendar →</a>
+    <a class="more" href="/app.html">See this week's calendar →</a>
   </div>
   <div class="c">
     <div class="grid9"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <h3>Earnings this month</h3>
     <p>A full month on one screen, so you can plan around the busy days.</p>
-    <a class="more" href="/">See this month's calendar →</a>
+    <a class="more" href="/app.html">See this month's calendar →</a>
   </div>
   <div class="c">
     <div class="m-row"><span class="tile">W</span><span><span class="m-sym">WMT</span><br><span class="m-sub">Before open</span></span><span class="m-sp"></span><span class="up">BEAT +9.3%</span></div>
     <div class="m-row"><span class="tile">N</span><span><span class="m-sym">NVDA</span><br><span class="m-sub">After close</span></span><span class="m-sp"></span><span class="m-sub">4:20 PM ET</span></div>
     <h3 style="margin-top:12px">Earnings today</h3>
     <p>Release times, estimates, and results the moment they publish.</p>
-    <a class="more" href="/">See today's calendar →</a>
+    <a class="more" href="/app.html">See today's calendar →</a>
   </div>
 </section>
 
@@ -299,7 +314,7 @@
         <li>Weekly watchlist email</li>
         <li>Share cards and link previews</li>
       </ul>
-      <a class="btn ghost" href="/">Open the calendar</a>
+      <a class="btn ghost" href="/app.html">Open the calendar</a>
     </div>
     <div class="plan hi">
       <span class="tag">COMING SOON</span>
