@@ -76,10 +76,10 @@
   .tri p{margin:0 0 12px;color:var(--muted);font-size:14.2px}
   .tri a.more{color:var(--blueLt);font-size:14px;font-weight:600}
   .grid9{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:14px}
-  .grid9 i{aspect-ratio:1;border-radius:6px;background:linear-gradient(160deg,rgba(47,107,255,.35),rgba(21,71,196,.18));
-    border:1px solid var(--border2);display:block}
-  .grid9 i:nth-child(3n){background:linear-gradient(160deg,rgba(107,165,255,.32),rgba(47,107,255,.14))}
-  .grid9 i:nth-child(4n){background:linear-gradient(160deg,rgba(52,211,153,.26),rgba(47,107,255,.12))}
+  .grid9 i{aspect-ratio:1;border-radius:7px;display:block;overflow:hidden;
+    background:linear-gradient(160deg,rgba(47,107,255,.30),rgba(21,71,196,.16));
+    border:1px solid var(--border2);background-size:cover;background-position:center}
+  .grid9 i.on{background-color:#fff;border-color:rgba(255,255,255,.14)}
 
   /* feature rows */
   .feat{padding:64px 0;border-top:1px solid var(--border2)}
@@ -194,23 +194,23 @@
 
 <section class="wrap tri">
   <div class="c">
-    <div class="grid9"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="grid9" id="gWeek"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <h3>Earnings this week</h3>
     <p>The week's key reporters at a glance, biggest companies first.</p>
-    <a class="more" href="/app.html">See this week's calendar →</a>
+    <a class="more" href="/app.html#week">See this week's calendar →</a>
   </div>
   <div class="c">
-    <div class="grid9"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="grid9" id="gMonth"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <h3>Earnings this month</h3>
     <p>A full month on one screen, so you can plan around the busy days.</p>
-    <a class="more" href="/app.html">See this month's calendar →</a>
+    <a class="more" href="/app.html#month">See this month's calendar →</a>
   </div>
   <div class="c">
     <div class="m-row"><span class="tile">W</span><span><span class="m-sym">WMT</span><br><span class="m-sub">Before open</span></span><span class="m-sp"></span><span class="up">BEAT +9.3%</span></div>
     <div class="m-row"><span class="tile">N</span><span><span class="m-sym">NVDA</span><br><span class="m-sub">After close</span></span><span class="m-sp"></span><span class="m-sub">4:20 PM ET</span></div>
     <h3 style="margin-top:12px">Earnings today</h3>
     <p>Release times, estimates, and results the moment they publish.</p>
-    <a class="more" href="/app.html">See today's calendar →</a>
+    <a class="more" id="todayLink" href="/app.html#week">See today's calendar →</a>
   </div>
 </section>
 
@@ -364,6 +364,51 @@
 </div></footer>
 
 <script>
+  /* The three cards show who is actually reporting, pulled from the same API the app uses.
+     Foreign ADRs (five letters ending in Y) are skipped: they carry huge caps so they win the
+     sort, but logo.dev has no mark for them and they render as empty plates. */
+  (function(){
+    var API='https://api.earningsradar.org', LOGO='pk_IaCPzNPATUWzZrN-vHTv1g';
+    function logoURL(t){ return 'https://img.logo.dev/ticker/'+encodeURIComponent(String(t).toUpperCase().replace(/\./g,'-'))+'?token='+LOGO+'&retina=true'; }
+    function iso(d){ return d.toISOString().slice(0,10); }
+    var now=new Date();
+    var dow=(now.getDay()+6)%7;                                  // Monday = 0
+    var mon=new Date(now); mon.setDate(now.getDate()-dow);
+    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+    var m1=new Date(now.getFullYear(),now.getMonth(),1);
+    var m2=new Date(now.getFullYear(),now.getMonth()+1,0);
+
+    async function fill(elId, from, to, n){
+      var el=document.getElementById(elId); if(!el) return;
+      try{
+        var r=await fetch(API+'/v1/calendar-lite?from='+from+'&to='+to, {cache:'no-store'});
+        if(!r.ok) return;
+        var rows=await r.json();
+        rows.sort(function(a,b){ return (b.market_cap_musd||0)-(a.market_cap_musd||0); });
+        var seen={}, out=[];
+        for(var i=0;i<rows.length && out.length<n;i++){
+          var t=rows[i].ticker||'';
+          if(!t || seen[t]) continue;
+          if(t.length===5 && /Y$/.test(t)) continue;
+          seen[t]=1; out.push(t);
+        }
+        var cells=el.querySelectorAll('i');
+        out.forEach(function(t,i){
+          if(!cells[i]) return;
+          var img=new Image();
+          img.onload=function(){ cells[i].style.backgroundImage='url('+logoURL(t)+')'; cells[i].className='on'; };
+          img.src=logoURL(t);
+          cells[i].title=t;
+        });
+      }catch(e){}
+    }
+    fill('gWeek',  iso(mon), iso(sun), 10);
+    fill('gMonth', iso(m1),  iso(m2),  10);
+
+    var tl=document.getElementById('todayLink');
+    if(tl) tl.href='/app.html#day-'+iso(now);
+  })();
+
   // Discounts are quoted against paying weekly ($5/wk = $260/yr), so every tier is measured
   // from the same baseline rather than each against a different one.
   var PLANS = {
