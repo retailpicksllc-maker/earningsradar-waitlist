@@ -364,49 +364,32 @@
 </div></footer>
 
 <script>
-  /* The three cards show who is actually reporting, pulled from the same API the app uses.
-     Foreign ADRs (five letters ending in Y) are skipped: they carry huge caps so they win the
-     sort, but logo.dev has no mark for them and they render as empty plates. */
+  /* The logo grids are decorative — the most recognisable names on the market, not whoever
+     happens to report this week. A live feed put Ping An and AIA ADRs in the top slots, which
+     have no logo and mean nothing to a visitor. Fixed lists always look right. */
   (function(){
-    var API='https://api.earningsradar.org', LOGO='pk_IaCPzNPATUWzZrN-vHTv1g';
-    function logoURL(t){ return 'https://img.logo.dev/ticker/'+encodeURIComponent(String(t).toUpperCase().replace(/\./g,'-'))+'?token='+LOGO+'&retina=true'; }
-    function iso(d){ return d.toISOString().slice(0,10); }
-    var now=new Date();
-    var dow=(now.getDay()+6)%7;                                  // Monday = 0
-    var mon=new Date(now); mon.setDate(now.getDate()-dow);
-    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
-    var m1=new Date(now.getFullYear(),now.getMonth(),1);
-    var m2=new Date(now.getFullYear(),now.getMonth()+1,0);
-
-    async function fill(elId, from, to, n){
+    var LOGO='pk_IaCPzNPATUWzZrN-vHTv1g';
+    var TOP  = ['NVDA','AAPL','MSFT','AMZN','GOOGL','META','TSLA','JPM','V','WMT'];
+    var NEXT = ['HD','KO','DIS','NFLX','AMD','COST','MCD','NKE','PEP','ORCL'];
+    function logoURL(t){ return 'https://img.logo.dev/ticker/'+encodeURIComponent(t)+'?token='+LOGO+'&retina=true'; }
+    function paint(elId, list){
       var el=document.getElementById(elId); if(!el) return;
-      try{
-        var r=await fetch(API+'/v1/calendar-lite?from='+from+'&to='+to, {cache:'no-store'});
-        if(!r.ok) return;
-        var rows=await r.json();
-        rows.sort(function(a,b){ return (b.market_cap_musd||0)-(a.market_cap_musd||0); });
-        var seen={}, out=[];
-        for(var i=0;i<rows.length && out.length<n;i++){
-          var t=rows[i].ticker||'';
-          if(!t || seen[t]) continue;
-          if(t.length===5 && /Y$/.test(t)) continue;
-          seen[t]=1; out.push(t);
-        }
-        var cells=el.querySelectorAll('i');
-        out.forEach(function(t,i){
-          if(!cells[i]) return;
-          var img=new Image();
-          img.onload=function(){ cells[i].style.backgroundImage='url('+logoURL(t)+')'; cells[i].className='on'; };
-          img.src=logoURL(t);
-          cells[i].title=t;
-        });
-      }catch(e){}
+      var cells=el.querySelectorAll('i');
+      list.forEach(function(t,i){
+        var c=cells[i]; if(!c) return;
+        c.title=t;
+        var img=new Image();
+        img.onload=function(){ c.style.backgroundImage='url('+logoURL(t)+')'; c.className='on'; };
+        img.src=logoURL(t);
+      });
     }
-    fill('gWeek',  iso(mon), iso(sun), 10);
-    fill('gMonth', iso(m1),  iso(m2),  10);
+    paint('gWeek', TOP);
+    paint('gMonth', NEXT);
 
+    // "See today's calendar" needs today's actual date, not a build-time one.
+    var d=new Date(), iso=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
     var tl=document.getElementById('todayLink');
-    if(tl) tl.href='/app.html#day-'+iso(now);
+    if(tl) tl.href='/app.html#day-'+iso;
   })();
 
   // Discounts are quoted against paying weekly ($5/wk = $260/yr), so every tier is measured
