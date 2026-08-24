@@ -440,6 +440,9 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
     <span class="bname">earnings&thinsp;<span class="b">radar</span></span>
   </a>
   <div class="links" id="navTabs">
+    <!-- Home is a real document, not an SPA page, so it carries no data-page attribute —
+         the nav click handler only binds a[data-page] and will let this navigate normally. -->
+    <a href="/">Home</a>
     <a href="#" data-page="cal" class="active">Calendar</a>
     <a href="#" data-page="earn">Earnings</a>
     <a href="#" data-page="my">My Stocks</a>
