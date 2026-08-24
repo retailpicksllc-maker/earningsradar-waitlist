@@ -135,6 +135,18 @@
   .tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--green);color:#062;
     font-size:11.5px;font-weight:800;border-radius:999px;padding:3px 12px;letter-spacing:.3px}
   .note{color:var(--muted);font-size:13px;margin-top:22px}
+  .seg{display:inline-flex;gap:4px;background:var(--card);border:1px solid var(--border2);
+    border-radius:999px;padding:4px;margin:0 auto 28px}
+  .seg button{border:0;cursor:pointer;font:inherit;font-size:14px;font-weight:700;color:var(--muted);
+    background:transparent;border-radius:999px;padding:8px 20px;transition:.15s;position:relative}
+  .seg button:hover{color:var(--text)}
+  .seg button[aria-pressed="true"]{background:var(--grad);color:#fff}
+  .seg .save{display:block;font-size:10px;font-weight:800;letter-spacing:.3px;opacity:.85;margin-top:1px}
+  .was{font-size:16px;color:var(--muted);text-decoration:line-through;margin-bottom:-4px;height:22px}
+  .eq{font-size:13px;color:var(--muted);margin-top:2px;min-height:19px}
+  .off{display:inline-block;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.4);
+    color:var(--green);font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;margin-left:8px;
+    vertical-align:middle;letter-spacing:.3px}
 
   footer{border-top:1px solid var(--border2);margin-top:50px;padding:26px 0 40px;color:var(--muted);font-size:13.4px}
   .fl{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
@@ -301,6 +313,11 @@
 <section class="wrap pricing" id="pricing">
   <h2>Pricing</h2>
   <p class="sub">The calendar, transcripts and history are free. Support the project and get the extras.</p>
+  <div class="seg" role="group" aria-label="Billing period">
+    <button type="button" data-p="week"  aria-pressed="false">Weekly</button>
+    <button type="button" data-p="month" aria-pressed="false">Monthly<span class="save">SAVE 31%</span></button>
+    <button type="button" data-p="year"  aria-pressed="true">Yearly<span class="save">SAVE 42%</span></button>
+  </div>
   <div class="plans">
     <div class="plan">
       <h3>Free</h3>
@@ -319,7 +336,9 @@
     <div class="plan hi">
       <span class="tag">COMING SOON</span>
       <h3>Pro</h3>
-      <div class="price">$14<small> / month</small></div>
+      <div class="was" id="proWas">$260</div>
+      <div class="price">$<span id="proAmt">150</span><small id="proPer"> / year</small><span class="off" id="proOff">42% OFF</span></div>
+      <div class="eq" id="proEq">Works out at $12.50 a month</div>
       <ul>
         <li>Everything in Free</li>
         <li>Instant result alerts, any stock you follow</li>
@@ -343,6 +362,28 @@
 </div></footer>
 
 <script>
+  // Discounts are quoted against paying weekly ($5/wk = $260/yr), so every tier is measured
+  // from the same baseline rather than each against a different one.
+  var PLANS = {
+    week:  {amt:'5',   per:' / week',  was:'',      off:'',        eq:'Billed weekly, cancel any time'},
+    month: {amt:'15',  per:' / month', was:'$21.67',off:'31% OFF', eq:'vs $21.67 a month paying weekly'},
+    year:  {amt:'150', per:' / year',  was:'$260',  off:'42% OFF', eq:'Works out at $12.50 a month'}
+  };
+  var segBtns = document.querySelectorAll('.seg button');
+  segBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var k = b.getAttribute('data-p'), p = PLANS[k];
+      segBtns.forEach(function(x){ x.setAttribute('aria-pressed', String(x === b)); });
+      document.getElementById('proAmt').textContent = p.amt;
+      document.getElementById('proPer').textContent = p.per;
+      document.getElementById('proWas').textContent = p.was;
+      document.getElementById('proEq').textContent  = p.eq;
+      var off = document.getElementById('proOff');
+      off.textContent = p.off;
+      off.style.display = p.off ? '' : 'none';
+    });
+  });
+
   document.getElementById('notify').addEventListener('click', function(e){
     e.preventDefault();
     this.textContent = 'Pro isn’t open yet — the calendar is free today';
