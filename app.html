@@ -31,9 +31,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   *{box-sizing:border-box;margin:0;padding:0}
   body{color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;min-height:100vh;
     background:
-      radial-gradient(1300px 720px at 50% -160px, rgba(47,107,255,.30), transparent 60%),
-      radial-gradient(900px 600px at 90% 0%, rgba(47,107,255,.14), transparent 55%),
-      linear-gradient(180deg,#0e1740 0%,#0a1028 45%,#070a1a 100%);
+      radial-gradient(1200px 620px at 50% -220px, rgba(47,107,255,.10), transparent 62%),
+      linear-gradient(180deg,#0c1330 0%,#0a1028 40%,#080c1e 100%);
     background-attachment:fixed;}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1400px;margin:0 auto;padding:22px 20px 60px}
@@ -41,13 +40,13 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   /* header */
   .calhead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
   .wm{display:flex;align-items:center;gap:12px}
-  .wmico{width:40px;height:50px;display:grid;place-items:center;flex:none;filter:drop-shadow(0 4px 12px rgba(47,107,255,.5))}
+  .wmico{width:40px;height:50px;display:grid;place-items:center;flex:none;filter:none}
   .wmico svg{width:100%;height:100%}
   .leaf-l{fill:#9FC0FF}.leaf-r{fill:#2F6BFF}
   .wmtext{display:flex;flex-direction:column;line-height:1.02;font-weight:800;font-size:23px}
   .wmtext .b{color:var(--blueLt)}
-  .caltitle{flex:1;text-align:center;padding-top:2px}
-  .caltitle h1{font-size:clamp(24px,3.4vw,34px);font-weight:900;letter-spacing:-.5px}
+  .caltitle{flex:1;text-align:left;padding-top:2px}
+  .caltitle h1{font-size:clamp(19px,2vw,23px);font-weight:800;letter-spacing:-.45px}
   .caltitle p{color:var(--muted);font-size:14px;margin-top:2px}
   .handle{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text);font-weight:700;font-size:13px;padding:9px 15px;border-radius:11px;white-space:nowrap}
   @media(max-width:760px){.calhead{flex-direction:column;align-items:center;text-align:center}.caltitle{order:-1}}
@@ -482,7 +481,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
 </div>
 
 <aside class="rail" id="rail" aria-label="Today's earnings"></aside>
-<button class="railtoggle" id="railToggle" type="button">📡 Today</button>
+<button class="railtoggle" id="railToggle" type="button">Today</button>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
@@ -809,7 +808,7 @@ function _lrow(r,hide){
     `<div class="lpx" data-quote="${esc(r.symbol)}"><span class="lprice">—</span></div>`+
     _lbox('Revenue',fmtRevM(rShow),revSurp(o))+
     _lbox('EPS',fmtEps(eShow),epsSurp(o))+
-    `<div class="lbell${(window.erWatch&&erWatch.has(r.symbol))?' on':''}" title="Watch ${esc(r.symbol)}">🔔</div></div>`;
+    `<div class="lbell${(window.erWatch&&erWatch.has(r.symbol))?' on':''}" title="Watch ${esc(r.symbol)}">★</div></div>`;
 }
 function renderDay(dISO){
   const d=new Date(dISO+'T12:00:00');
@@ -919,7 +918,7 @@ document.querySelectorAll('.viewswitch .vbtn').forEach(function(b){ b.onclick=fu
     const n=(window.erWatch?erWatch.list().length:0);
     b.textContent='★ My Stocks'+(n?` (${n})`:''); };
   b.onclick=()=>{
-    if(!_myOnly && (!window.erWatch||!erWatch.list().length)){ toast('Tap the 🔔 on any ticker to start your watchlist'); return; }
+    if(!_myOnly && (!window.erWatch||!erWatch.list().length)){ toast('Tap the ★ on any ticker to start your watchlist'); return; }
     _myOnly=!_myOnly; try{localStorage.setItem('er_myonly',_myOnly?'1':'0');}catch(e){}
     erTrack('mystocks_toggle',{on:_myOnly?1:0}); paint(); renderCalendar();
   };
@@ -1520,8 +1519,8 @@ function openDetail(sym,date){
     const on=erWatch.toggle(sym);
     star.textContent=on?'★':'☆'; star.classList.toggle('on',on);
     erTrack(on?'watch_add':'watch_remove',{ticker:sym});
-    if(on&&!erWatch.signedIn()) toast('⭐ Watching '+sym+' — sign in to sync across devices');
-    else toast(on?('⭐ Watching '+sym):('Removed '+sym));
+    if(on&&!erWatch.signedIn()) toast('Watching '+sym+' — sign in to sync across devices');
+    else toast(on?('Watching '+sym):('Removed '+sym));
   };
   // Share — the caption is built from the same guarded values the popup renders, so a
   // suppressed surprise (ADR unit mismatch) can never leak into a post as a beat claim.
@@ -1757,8 +1756,8 @@ $('#calGrid').addEventListener('click',e=>{
     if(s&&window.erWatch){
       const on=erWatch.toggle(s); bell.classList.toggle('on',on);
       erTrack(on?'watch_add':'watch_remove',{ticker:s});
-      if(on&&!erWatch.signedIn()) toast('⭐ Watching '+s+' — sign in to sync across devices');
-      else toast(on?('⭐ Watching '+s):('Removed '+s));
+      if(on&&!erWatch.signedIn()) toast('Watching '+s+' — sign in to sync across devices');
+      else toast(on?('Watching '+s):('Removed '+s));
     }
     return;
   }
@@ -1887,7 +1886,7 @@ function renderMyPage(){
   const list=(window.erWatch?erWatch.list():[]);
   if(!list.length){
     el.innerHTML=`<div class="ptitle"><h1>My Stocks</h1></div>
-      <div class="pempty">You haven't starred any stocks yet.<br>Tap the 🔔 on any stock in the calendar to watch it here.</div>`;
+      <div class="pempty">You haven't starred any stocks yet.<br>Tap the ★ on any stock in the calendar to watch it here.</div>`;
     return;
   }
   const t=iso(new Date());
