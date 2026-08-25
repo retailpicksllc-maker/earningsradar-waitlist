@@ -408,10 +408,11 @@
           var n=by[iso(dates[+h.getAttribute('data-d')])]||0;
           h.querySelector('.cn').textContent = n || '';
         });
-      }).catch(function(){});
-    // "Today" needs today's date, not a build-time one.
-    var d=new Date(), iso=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-    var tl=document.getElementById('todayLink'); if(tl) tl.href='/app.html#day-'+iso;
+      }).catch(function(e){ console.warn('week counts unavailable:', e); });
+    // "Today" needs today's date, not a build-time one. Reuse iso() rather than declaring a
+    // second `iso` — `var iso = "..."` here would hoist over the function above and the week
+    // counts, which call iso() inside an async .then, would throw after this line runs.
+    var tl=document.getElementById('todayLink'); if(tl) tl.href='/app.html#day-'+iso(new Date());
   })();
 
   /* Discounts are quoted against paying weekly ($5/wk = $260/yr), so every tier is measured
