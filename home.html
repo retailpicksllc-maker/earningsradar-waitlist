@@ -47,9 +47,10 @@
   .mark{width:17px;height:22px;display:block}
   .mark .l{fill:var(--blueLt)} .mark .r{fill:var(--blue)}
   .bname .b{color:var(--blueLt)}
-  .nav .links{display:flex;gap:18px;margin-left:12px;font-size:14px;color:var(--muted)}
-  .nav .links a:hover{color:var(--text)}
-  .nav .links a.active{color:var(--text);font-weight:600}
+  .nav .links{display:flex;gap:10px;margin-left:14px;font-size:14px;color:var(--muted)}
+  .nav .links a{padding:6px 13px;border-radius:8px;transition:background .12s,color .12s}
+  .nav .links a:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .nav .links a.active{color:var(--text);font-weight:600;background:rgba(255,255,255,.07)}
   .nav .sp{flex:1}
   .btn{display:inline-block;border:0;cursor:pointer;font:inherit;font-weight:600;border-radius:10px;
     padding:11px 20px;background:var(--blue);color:#fff;transition:background .15s;text-align:center;font-size:15px}
