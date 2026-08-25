@@ -80,7 +80,8 @@
   .cols{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border2)}
   .col{background:var(--bg2);padding:11px 9px;min-height:186px}
   .col h4{margin:0 0 9px;font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.2px}
-  .col h4 span{color:var(--dim);font-weight:600}
+  .col h4 .cn{color:var(--dim);font-weight:600}
+  .col h4 .dn{color:var(--muted)}
   .chip{font-size:9.5px;font-weight:700;letter-spacing:.4px;color:var(--dim);
     border:1px solid var(--border2);border-radius:6px;padding:2px 6px;display:inline-block;margin-bottom:8px}
   .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
@@ -216,18 +217,18 @@
   <a class="app" href="/app.html#week" style="display:block">
     <div class="appbar">
       <span class="dot"></span><span class="t">This week</span>
-      <span class="d">Aug 17 – Aug 21</span><span class="sp"></span><span class="d">5 days</span>
+      <span class="d" id="wkRange">—</span><span class="sp"></span><span class="d">5 days</span>
     </div>
     <div class="cols">
-      <div class="col"><h4>Mon 17 <span>6</span></h4><span class="chip">AFTER CLOSE</span>
+      <div class="col"><h4 data-d="0"><span class="dn">—</span> <span class="cn"></span></h4><span class="chip">AFTER CLOSE</span>
         <div class="tiles" data-syms="BHP,CSL,FN,HTHT"><i></i><i></i><i></i><i></i></div></div>
-      <div class="col"><h4>Tue 18 <span>9</span></h4><span class="chip">BEFORE OPEN</span>
+      <div class="col"><h4 data-d="1"><span class="dn">—</span> <span class="cn"></span></h4><span class="chip">BEFORE OPEN</span>
         <div class="tiles" data-syms="HD,BIDU,TOL,JKHY"><i></i><i></i><i></i><i></i></div></div>
-      <div class="col"><h4>Wed 19 <span>12</span></h4><span class="chip">BEFORE OPEN</span>
+      <div class="col"><h4 data-d="2"><span class="dn">—</span> <span class="cn"></span></h4><span class="chip">BEFORE OPEN</span>
         <div class="tiles" data-syms="ADI,TJX,LOW,TGT"><i></i><i></i><i></i><i></i></div></div>
-      <div class="col"><h4>Thu 20 <span>13</span></h4><span class="chip">BEFORE OPEN</span>
+      <div class="col"><h4 data-d="3"><span class="dn">—</span> <span class="cn"></span></h4><span class="chip">BEFORE OPEN</span>
         <div class="tiles" data-syms="WMT,BABA,DE,ROST"><i></i><i></i><i></i><i></i></div></div>
-      <div class="col"><h4>Fri 21 <span>5</span></h4><span class="chip">BEFORE OPEN</span>
+      <div class="col"><h4 data-d="4"><span class="dn">—</span> <span class="cn"></span></h4><span class="chip">BEFORE OPEN</span>
         <div class="tiles" data-syms="BJ,BEKE,NIOBW,FLO"><i></i><i></i><i></i><i></i></div></div>
     </div>
   </a>
@@ -382,6 +383,32 @@
       g.querySelectorAll('i').forEach(function(cell,i){ if(syms[i]) set(cell,syms[i]); });
     });
     document.querySelectorAll('.lg[data-sym]').forEach(function(el){ set(el, el.getAttribute('data-sym')); });
+
+    /* The week strip showed a hardcoded "Aug 17 – Aug 21" — correct the day it was written and
+       a week out of date by the next Monday. Dates and counts now come from the same API the
+       app uses, so the homepage can't advertise a stale week. Logos stay decorative. */
+    var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var DAY=['Mon','Tue','Wed','Thu','Fri'];
+    var now=new Date(), dow=(now.getDay()+6)%7;
+    var mon=new Date(now); mon.setDate(now.getDate()-dow); mon.setHours(12,0,0,0);
+    function iso(d){ return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+    var dates=[]; for(var i=0;i<5;i++){ var d=new Date(mon); d.setDate(mon.getDate()+i); dates.push(d); }
+    var rng=document.getElementById('wkRange');
+    if(rng) rng.textContent = MON[dates[0].getMonth()]+' '+dates[0].getDate()+' – '+MON[dates[4].getMonth()]+' '+dates[4].getDate();
+    document.querySelectorAll('.col h4[data-d]').forEach(function(h){
+      var d=dates[+h.getAttribute('data-d')];
+      h.querySelector('.dn').textContent = DAY[+h.getAttribute('data-d')]+' '+d.getDate();
+    });
+    fetch('https://api.earningsradar.org/v1/calendar-lite?from='+iso(dates[0])+'&to='+iso(dates[4]),{cache:'no-store'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(rows){
+        if(!rows) return;
+        var by={}; rows.forEach(function(x){ by[x.report_date]=(by[x.report_date]||0)+1; });
+        document.querySelectorAll('.col h4[data-d]').forEach(function(h){
+          var n=by[iso(dates[+h.getAttribute('data-d')])]||0;
+          h.querySelector('.cn').textContent = n || '';
+        });
+      }).catch(function(){});
     // "Today" needs today's date, not a build-time one.
     var d=new Date(), iso=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
     var tl=document.getElementById('todayLink'); if(tl) tl.href='/app.html#day-'+iso;
