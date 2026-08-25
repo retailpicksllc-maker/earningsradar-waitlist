@@ -314,8 +314,10 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .news .t{font-size:13px;font-weight:600} .news .m{font-size:11px;color:var(--muted);margin-top:2px}
 
   /* top nav (shared across site) */
-  .nav{position:sticky;top:0;z-index:55;backdrop-filter:blur(12px);background:rgba(8,12,30,.72);border-bottom:1px solid var(--border2)}
-  .nav .in{max-width:1400px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:16px}
+  .nav{position:sticky;top:0;z-index:55;backdrop-filter:blur(14px);background:rgba(10,16,36,.9);border-bottom:1px solid var(--border2)}
+    .nav .brand .wmico{width:17px;height:22px}
+  .nav .links{gap:18px;margin-left:12px}
+  .nav .in{max-width:1400px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;gap:20px}
   .nav .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px}
   .nav .brand .b{color:var(--blueLt)}
   .nav .brand .bname{white-space:nowrap;letter-spacing:-.3px}
@@ -324,10 +326,10 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .nav .wmico svg{width:100%;height:100%}
   .nav .links{display:flex;align-items:center;gap:6px}
   .nav .navright{margin-left:auto}
-  .nav .links a{padding:8px 13px;border-radius:10px;font-size:14px;font-weight:700;color:var(--muted)}
-  .nav .links a:hover{color:var(--text);background:var(--card)}
-  .nav .links a.active{color:var(--text);background:var(--card2)}
-  .nav .links a.cta{color:#fff;background:var(--grad);box-shadow:0 6px 18px rgba(47,107,255,.35)}
+  .nav .links a{padding:0;border-radius:0;font-size:14px;font-weight:500;color:var(--muted)}
+  .nav .links a:hover{color:var(--text);background:transparent}
+  .nav .links a.active{color:var(--text);background:transparent;font-weight:600}
+  .nav .links a.cta{color:#fff;background:var(--blue);box-shadow:none;border-radius:9px;padding:8px 15px;font-weight:600}
   @media(max-width:640px){.nav .links a.hideM{display:none}}
   /* ===== App showcase (below the calendar) — scoped under .appshowcase ===== */
   html{scroll-behavior:smooth}
