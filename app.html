@@ -819,9 +819,9 @@ function renderDay(dISO){
   const list=dedupClasses(DATA.filter(r=>r.date===dISO && hasData(r)).sort((a,b)=>_mcap(b)-_mcap(a)));
   const isPast=dISO<iso(new Date());
   const before=list.filter(r=>sessionOf(r.time)==='bmo');
-  const after=list.filter(r=>sessionOf(r.time)==='amc');
-  // Session honesty: if no source knows the session, say so instead of mislabeling as After Close.
-  const tbd=list.filter(r=>sessionOf(r.time)==='tbd');
+  // No TBD bucket anywhere: an unknown session folds into After Close, matching the day
+  // renderer. A third heading for the handful nobody has a time for reads as broken data.
+  const after=list.filter(r=>sessionOf(r.time)!=='bmo');
   const DCAP=5;
   const sess=(items,label)=>{
     if(!items.length) return '';
@@ -829,7 +829,7 @@ function renderDay(dISO){
     const more=items.length>DCAP?`<div class="lmore">Show ${items.length-DCAP} more</div>`:'';
     return `<div class="lsess"><div class="lsesshead">${label} <span style="color:var(--muted)">· ${items.length}</span></div>${rowsHtml}${more}</div>`;
   };
-  const body = list.length ? sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')+sess(tbd,'◷ Time not specified')
+  const body = list.length ? sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')
     : `<div style="padding:44px;text-align:center;color:var(--muted)">No earnings on this day.</div>`;
   $('#calGrid').innerHTML=`<div class="dayback" id="dayBack">‹ Back to calendar</div><div class="dayhead2"><h2>${title}</h2><div class="dsub">${list.length} ${list.length===1?'company':'companies'} reporting</div></div>${body}`;
   upgradeLogos($('#calGrid'));
@@ -868,11 +868,10 @@ function renderList(){
     list=dedupClasses(list);
     const isPast=dISO<todayISO;
     const before=list.filter(r=>sessionOf(r.time)==='bmo');
-    const after=list.filter(r=>sessionOf(r.time)==='amc');
-    const tbd=list.filter(r=>sessionOf(r.time)==='tbd');   // honest bucket when no source knows the session
+    const after=list.filter(r=>sessionOf(r.time)!=='bmo');
     const isToday=dISO===todayISO;
     html+=`<div class="lday"><div class="ldayhead${isToday?' today':''}">${days[i]} <span class="dnum">${d.getDate()}</span></div>`+
-      sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')+sess(tbd,'◷ Time not specified')+`</div>`;
+      sess(before,'☀︎ Before Open')+sess(after,'☾ After Close')+`</div>`;
   }
   $('#calGrid').innerHTML = html || `<div style="padding:44px;text-align:center;color:var(--muted)">No earnings this week.</div>`;
   upgradeLogos($('#calGrid'));
@@ -1876,11 +1875,11 @@ function renderEarnPage(){
     ? `<div class="psec"><h2>${label}</h2><div class="calist" style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">${list.map(r=>_lrow(r,false)).join('')}</div></div>`
     : `<div class="psec"><h2>${label}</h2><div class="pempty">No reports.</div></div>`;
   const bmo=todays.filter(r=>sessionOf(r.time)==='bmo');
-  const amc=todays.filter(r=>sessionOf(r.time)==='amc');
-  const tbd=todays.filter(r=>sessionOf(r.time)==='tbd');
+  // !== 'bmo', not === 'amc': an unknown session must land in After Close, not vanish.
+  const amc=todays.filter(r=>sessionOf(r.time)!=='bmo');
   const nice=new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
   el.innerHTML=`<div class="ptitle"><h1>Today's Earnings</h1><p>${nice} · live results as they land</p></div>`
-    + sec('Before Open',bmo) + sec('After Close',amc) + (tbd.length?sec('Time not specified',tbd):'');
+    + sec('Before Open',bmo) + sec('After Close',amc);
   upgradeLogos(el); pollPrices();
 }
 function renderMyPage(){
@@ -2088,7 +2087,7 @@ function renderRail(){
   h+=`<h3>Still to come · ${upcoming.length}</h3>`;
   h+= upcoming.length ? upcoming.slice(0,12).map(r=>{
         const sess=sessionOf(r.time);
-        return row(r.symbol, sess==='bmo'?'Before open':sess==='amc'?'After close':'Time not specified',
+        return row(r.symbol, sess==='bmo'?'Before open':'After close',
           `<span data-quote="${esc(r.symbol)}"></span>`);
       }).join('') : `<div class="rempty">No more reports scheduled today.</div>`;
 
