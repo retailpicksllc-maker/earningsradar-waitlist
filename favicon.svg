@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Earnings Radar">
+  <rect width="64" height="64" rx="14" fill="#0A1024"/>
+  <g transform="translate(11.2,6) scale(0.3467)">
+    <path d="M60 6 C2 42 2 108 60 144 Z" fill="#9FC0FF"/>
+    <path d="M60 6 C118 42 118 108 60 144 Z" fill="#2F6BFF"/>
+  </g>
+</svg>
