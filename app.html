@@ -610,7 +610,8 @@ function logoURL(sym){
       const a=document.createElement(e.tweet_id?'a':'div');
       a.className='livechip';
       if(e.tweet_id){a.href=`https://x.com/_EarningsRadar/status/${e.tweet_id}`;a.target='_blank';a.rel='noopener';}
-      const beat=(e.eps_act!=null&&e.eps_est!=null)?(+e.eps_act>=+e.eps_est):null;
+      // Same rule as the rail: if the API declined to state a surprise, do not badge a direction.
+      const beat=(e.eps_act!=null&&e.eps_est!=null&&e.surprise_eps_pct!=null)?(+e.eps_act>=+e.eps_est):null;
       const eps=e.eps_act!=null?`EPS $${(+e.eps_act).toFixed(2)}`+(e.eps_est!=null?` vs $${(+e.eps_est).toFixed(2)}`:''):null;
       const sp=e.surprise_eps_pct!=null?` (${e.surprise_eps_pct>0?'+':''}${(+e.surprise_eps_pct).toFixed(1)}%)`:'';
       const rev=money(e.rev_act);
@@ -954,7 +955,11 @@ function mapWorkerRow(w){
     revenueEstimate:(w.rev_est!=null?w.rev_est/1e6:null), revenueActual:(w.rev_act!=null?w.rev_act/1e6:null),
     marketCap:mktCap, name:w.ticker, status:w.status||'',
     preRevenue:!!w.pre_revenue,
-    expectedTime:w.expected_time||'', expectedTimeConf:w.expected_time_confidence||'unknown', verified:w.verified
+    expectedTime:w.expected_time||'', expectedTimeConf:w.expected_time_confidence||'unknown', verified:w.verified,
+    // The API nulls surprise_eps_pct when it will not stand behind a beat/miss — ATH-PA is a
+    // PREFERRED share carrying the common's 3.49 estimate against a meaningless 0.00. Carry that
+    // decision through instead of letting the front end recompute one and print MISS -100.0%.
+    surpriseEps:(w.surprise_eps_pct!=null?+w.surprise_eps_pct:null)
   };
   return {symbol:w.ticker, name:w.ticker, date:String(w.report_date||'').slice(0,10), time, marketCap:mktCap, row};
 }
@@ -2081,7 +2086,11 @@ function renderRail(){
 
   h+=`<h3>Reported today · ${reported.length}</h3>`;
   h+= reported.length ? reported.slice(0,12).map(r=>{
-        const o=r.row||{}; const sus=unitSuspect(o); const s=sus?'':((o.eps!=null)?surprise(o.epsActual,o.eps):'');
+        const o=r.row||{};
+        // No verdict from the API = no verdict here. Recomputing one downstream is how a
+        // preferred share ended up as the site's headline "MISS -100.0%".
+        const noCall=(o.eps!=null&&o.epsActual!=null&&o.surpriseEps==null);
+        const sus=unitSuspect(o)||noCall; const s=sus?'':((o.eps!=null)?surprise(o.epsActual,o.eps):'');
         const up=(o.eps!=null&&o.epsActual>=o.eps);
         return row(r.symbol, `EPS ${fmtEps(o.epsActual)} vs ${fmtEps(o.eps)}`,
           sus ? '<span class="rsub">reported</span>'
