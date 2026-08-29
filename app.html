@@ -1786,7 +1786,10 @@ const _tname={}; DATA.forEach(r=>{ if(r.symbol && !_tname[r.symbol]) _tname[r.sy
 let _allTickers=[...new Set(DATA.map(r=>r.symbol).filter(Boolean))];   // calendar tickers until universe loads
 (async function loadUniverse(){
   try{
-    const r=await fetch(`${WORKER_BASE}/v1/universe`,{cache:'no-store'}); if(!r.ok) return;
+    // slim=1 returns bare symbols. This list is only used for search autocomplete, and the full
+    // response ships 667KB of market caps and report dates that are read once and discarded.
+    // Cached rather than no-store: the set of tickers we track changes daily at most.
+    const r=await fetch(`${WORKER_BASE}/v1/universe?slim=1`,{cache:'default'}); if(!r.ok) return;
     const j=await r.json(); const list=Array.isArray(j)?j:(j.tickers||j.universe||j.data||[]);
     _allTickers=[...new Set(list.map(x=>(x.ticker||x.symbol||x).toString().toUpperCase()).filter(Boolean))];
   }catch(e){}
