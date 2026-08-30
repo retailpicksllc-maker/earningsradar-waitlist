@@ -1501,8 +1501,16 @@ document.addEventListener('click',e=>{
 // which means two things the modal never had to handle: the rail already has content (today's
 // earnings) that must come back on close, and below 1280px the rail is off-canvas, so opening
 // a ticker there has to slide it in or the click appears to do nothing.
+// The rail hosts the detail on DESKTOP only. Below 1280px the rail is an off-canvas overlay that
+// slides over the whole screen, so putting the ticker sheet in it meant opening a ticker took over
+// the page and closing it left the panel stuck open on top of the calendar. The centred modal was
+// always the right pattern on a phone; on mobile we simply keep it.
+function _railMode(){
+  return !!document.getElementById('rail') && window.innerWidth >= 1280;
+}
 function _detHost(){
   const rail = document.getElementById('rail');
+  if(!_railMode()) return document.getElementById('sheet');
   if(!rail) return document.getElementById('sheet');
   let host = document.getElementById('railSheet');
   if(!host){
@@ -1519,14 +1527,16 @@ function _detHost(){
 }
 function _showDetailInRail(){
   const rail = document.getElementById('rail');
-  if(!rail){ $('#overlay').classList.add('on'); return; }
-  rail.classList.add('detail','on');          // .on matters only below 1280px, where it is off-canvas
+  if(!_railMode()){ $('#overlay').classList.add('on'); return; }
+  rail.classList.add('detail');
   rail.scrollTop = 0;
 }
 function _hideDetailInRail(){
   const rail = document.getElementById('rail');
-  if(!rail) return false;
+  if(!rail || !rail.classList.contains('detail')) return false;
   rail.classList.remove('detail');
+  // never leave the panel slid in on a phone — that is what made it feel like it took over
+  if(window.innerWidth < 1280) rail.classList.remove('on');
   try{ renderRail(); }catch(e){ rail.innerHTML=''; }
   return true;
 }
@@ -2294,6 +2304,22 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     if(cur) setW(cur,false);
   });
 })();
+
+// Rotating a tablet or resizing across 1280px with a ticker open would leave the sheet in the
+// wrong host — visible in neither. Close it rather than try to move it mid-flight.
+window.addEventListener('resize', (function(){
+  let wide = window.innerWidth >= 1280;
+  return function(){
+    const now = window.innerWidth >= 1280;
+    if(now !== wide){
+      wide = now;
+      const rail = document.getElementById('rail');
+      const open = (rail && rail.classList.contains('detail')) ||
+                   document.getElementById('overlay').classList.contains('on');
+      if(open) try{ closeDetail(); }catch(e){}
+    }
+  };
+})());
 </script>
 </body>
 </html>
