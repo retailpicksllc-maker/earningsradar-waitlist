@@ -208,13 +208,16 @@
   .nmsg{margin:0;font-size:12.5px;color:var(--dim);min-height:17px}
   .nmsg.ok{color:var(--green)} .nmsg.err{color:var(--red)}
 
-  /* Social button: a real target, not a text link. 36px square clears the 24px minimum for a
-     tap target on mobile, and the brand mark reads at a glance where "@_EarningsRadar" does not. */
-  .social{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;
-    border:1px solid var(--border2);border-radius:10px;background:rgba(255,255,255,.04);
-    color:var(--text);transition:background .15s,border-color .15s,transform .15s}
-  .social:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.28);transform:translateY(-1px)}
-  .social svg{width:16px;height:16px;fill:currentColor;display:block}
+  /* Follow pill — sits under the content, not inside the footer sentence. A footer link is
+     where people stop looking; a pill between the last section and the legal text is the last
+     thing they read while still engaged. */
+  .followbar{display:flex;justify-content:center;padding:6px 20px 2px}
+  .follow{display:inline-flex;align-items:center;gap:10px;padding:11px 20px;border-radius:999px;
+    border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-weight:650;
+    font-size:14.5px;text-decoration:none;transition:background .15s,border-color .15s,transform .15s}
+  .follow:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.30);transform:translateY(-1px)}
+  .follow svg{width:16px;height:16px;fill:currentColor;flex:none}
+  .follow .h{color:var(--muted);font-weight:500}
   footer{border-top:1px solid var(--border2);margin-top:44px;padding:22px 0 36px;color:var(--dim);font-size:12.8px}
   .fl{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
   .fl a:hover{color:var(--text)}
@@ -430,13 +433,17 @@
   <p class="note">Free stays free — the calendar is the product, not the trial.</p>
 </section>
 
+<div class="followbar">
+  <a class="follow" href="https://x.com/_EarningsRadar" target="_blank" rel="noopener me"
+     aria-label="Follow Earnings Radar on X">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>Follow us on X</span><span class="h">@_EarningsRadar</span>
+  </a>
+</div>
+
 <footer><div class="wrap fl">
   <span>© 2026 Earnings Radar</span>
   <a href="/privacy.html">Privacy</a>
-  <a class="social" href="https://x.com/_EarningsRadar" target="_blank" rel="noopener me"
-     aria-label="Earnings Radar on X" title="@_EarningsRadar">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
+
   <span class="sp"></span>
   <span>Informational only — not investment advice.</span>
 </div></footer>
