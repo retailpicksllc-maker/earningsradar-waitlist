@@ -323,6 +323,24 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .htable .hh{background:rgba(255,255,255,.05);font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
   .htable .q{color:var(--muted);font-weight:800}
   .htable .r span{text-align:right} .htable .r .q{text-align:left}
+  /* No horizontal scroll inside the ticker sheet on a phone.
+     Three separate causes, all of which have to go:
+       1. grid children default to min-width:auto, so a wide value ($96.22B) forces the whole
+          5-column table wider than the screen rather than shrinking. This is the big one.
+       2. .dtabs scrolls sideways by design, which is exactly the gesture we want to remove.
+       3. long unbroken strings in news headlines and transcript text push the box out.
+     Vertical scrolling is untouched — that is expected on a phone. */
+  .htable .r > span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  @media(max-width:640px){
+    .sheet{overflow-x:hidden;padding:16px 14px}
+    .htable .r{grid-template-columns:52px 1fr 1fr 1fr 1fr;gap:4px;padding:8px 7px;font-size:11px}
+    .htable .hh{font-size:8.5px;letter-spacing:.2px}
+    .dtabs{overflow-x:visible;flex-wrap:wrap;gap:0}
+    .dtab{padding:9px 10px;font-size:13px}
+    .sheet .detchart,.sheet #detChart{max-width:100%}
+    .sheet img,.sheet svg,.sheet canvas{max-width:100%;height:auto}
+    .sheet,.sheet p,.sheet div,.sheet span{overflow-wrap:anywhere}
+  }
   /* earnings history chart */
   .echead{display:flex;align-items:center;gap:10px;margin:2px 0 10px;flex-wrap:wrap}
   .ecseg{display:inline-flex;background:var(--bg2);border:1px solid var(--border2);border-radius:11px;padding:3px;gap:2px}
