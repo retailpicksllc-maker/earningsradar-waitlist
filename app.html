@@ -190,7 +190,11 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
 
   /* detail modal */
   /* ── Right rail: today's earnings + live calls, persistent on every page ── */
-  .rail{position:fixed;right:0;top:57px;bottom:0;width:312px;z-index:40;overflow-y:auto;
+  /* Width is a custom property because two rules have to agree on it: the rail's own width
+     and the body padding that stops the calendar running underneath. Setting one and not
+     the other is how a resizable panel ends up overlapping the content. */
+  :root{--railw:312px}
+  .rail{position:fixed;right:0;top:57px;bottom:0;width:var(--railw);z-index:40;overflow-y:auto;
     background:var(--bg2);border-left:1px solid var(--border2);padding:16px 14px 40px;scrollbar-width:thin}
   .rail h3{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 9px}
   .rail h3:first-child{margin-top:0}
@@ -225,8 +229,16 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
     color:var(--text);border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer;
     font-family:inherit;margin-bottom:12px}
   .railback:hover{border-color:var(--blueLt)}
+  /* Drag handle on the rail's left edge. 5px of hit area, invisible until hovered or dragged,
+     so it does not read as a border. Hidden below 1280px where the rail is an off-canvas
+     overlay and resizing it would mean nothing. */
+  .railgrip{position:fixed;top:57px;bottom:0;width:5px;right:var(--railw);z-index:41;cursor:col-resize;
+    background:transparent;transition:background .12s}
+  .railgrip:hover,.railgrip.on{background:var(--blueLt)}
+  @media(max-width:1279px){ .railgrip{display:none} }
+  body.railsizing{user-select:none;cursor:col-resize}
   .railtoggle{display:none}
-  @media(min-width:1280px){ body{padding-right:312px} }
+  @media(min-width:1280px){ body{padding-right:var(--railw)} }
   @media(max-width:1279px){
     .rail{transform:translateX(100%);transition:transform .22s ease;box-shadow:-18px 0 50px rgba(0,0,0,.5)}
     .rail.on{transform:none}
@@ -503,6 +515,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   <div class="calnote" id="calNote"></div>
 </div>
 
+<div class="railgrip" id="railGrip" role="separator" aria-orientation="vertical" aria-label="Resize panel" tabindex="0"></div>
 <aside class="rail" id="rail" aria-label="Today's earnings"></aside>
 <button class="railtoggle" id="railToggle" type="button">Today</button>
 
@@ -2233,6 +2246,54 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js"></script>
+<script type="module" src="auth.js">
+/* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
+   drift apart, and persists per browser — someone who widens it to read a transcript should not
+   have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,
+   and past 55% of the viewport the calendar stops being usable. */
+(function(){
+  const MIN=260, MAXFRAC=0.55, KEY='er_railw';
+  const root=document.documentElement;
+  const clamp=w=>Math.max(MIN, Math.min(w, Math.round(window.innerWidth*MAXFRAC)));
+  function setW(w,save){
+    w=clamp(w);
+    root.style.setProperty('--railw', w+'px');
+    if(save){ try{ localStorage.setItem(KEY,String(w)); }catch(e){} }
+  }
+  try{ const saved=parseInt(localStorage.getItem(KEY)||'',10); if(saved) setW(saved,false); }catch(e){}
+
+  const grip=document.getElementById('railGrip');
+  if(!grip) return;
+  let dragging=false;
+  const move=e=>{ if(!dragging) return;
+    const x=(e.touches?e.touches[0].clientX:e.clientX);
+    setW(window.innerWidth-x, false); e.preventDefault(); };
+  const stop=()=>{ if(!dragging) return; dragging=false;
+    grip.classList.remove('on'); document.body.classList.remove('railsizing');
+    // save only on release: writing localStorage on every mousemove is hundreds of writes a drag
+    const cur=parseInt(getComputedStyle(root).getPropertyValue('--railw'),10);
+    if(cur) setW(cur,true); };
+  const start=e=>{ dragging=true; grip.classList.add('on');
+    document.body.classList.add('railsizing'); e.preventDefault(); };
+
+  grip.addEventListener('mousedown',start);
+  grip.addEventListener('touchstart',start,{passive:false});
+  window.addEventListener('mousemove',move);
+  window.addEventListener('touchmove',move,{passive:false});
+  window.addEventListener('mouseup',stop);
+  window.addEventListener('touchend',stop);
+  // keyboard: a separator that only responds to a mouse is unusable for anyone who cannot use one
+  grip.addEventListener('keydown',e=>{
+    const cur=parseInt(getComputedStyle(root).getPropertyValue('--railw'),10)||312;
+    if(e.key==='ArrowLeft'){ setW(cur+24,true); e.preventDefault(); }
+    if(e.key==='ArrowRight'){ setW(cur-24,true); e.preventDefault(); }
+  });
+  // a saved width wider than a smaller screen would push the calendar off — re-clamp on resize
+  window.addEventListener('resize',()=>{
+    const cur=parseInt(getComputedStyle(root).getPropertyValue('--railw'),10);
+    if(cur) setW(cur,false);
+  });
+})();
+</script>
 </body>
 </html>
