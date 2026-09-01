@@ -10,7 +10,27 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0A1024">
-<title>Earnings Radar — Earnings Calendar</title>
+<title>Earnings Radar — Free Earnings Calendar, EPS Estimates &amp; Results</title>
+<!-- SEO: app.html is the largest page on the site and was in the sitemap with nothing but a
+     <title>. Search Console showed 1 indexed page against 803 submitted; a page with no canonical
+     is a page Google has to guess about, and /app and /app.html both resolve, so there were two
+     URLs for it. Everything below matches the pattern already used by index.html and /t/*.html. -->
+<link rel="canonical" href="https://earningsradar.org/app.html">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<meta name="description" content="Free earnings calendar with EPS and revenue estimates, actuals and surprise for thousands of US companies. Five years of history per ticker, updated daily.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://earningsradar.org/app.html">
+<meta property="og:site_name" content="Earnings Radar">
+<meta property="og:title" content="Earnings Radar — free earnings calendar, estimates &amp; results">
+<meta property="og:description" content="Every earnings report, every week. EPS and revenue estimates against actuals, five years of history per ticker. Free.">
+<meta property="og:image" content="https://earningsradar.org/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@_EarningsRadar">
+<meta name="twitter:title" content="Earnings Radar — free earnings calendar, estimates &amp; results">
+<meta name="twitter:description" content="Every earnings report, every week. EPS and revenue estimates against actuals, five years of history per ticker. Free.">
+<meta name="twitter:image" content="https://earningsradar.org/og-image.png">
 <!-- Re-arm the 5s sign-in popup on every visit (clears auth.js's once-per-session guard). -->
 <script>try{sessionStorage.removeItem("er_auth_prompted");}catch(e){}</script>
 <!-- Google Analytics 4 (Consent Mode v2: default denied until the visitor accepts the banner). -->
