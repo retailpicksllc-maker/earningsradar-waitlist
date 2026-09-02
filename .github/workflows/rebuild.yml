@@ -1,0 +1,47 @@
+# Nightly page rebuild — the fix for pages decaying while the data moves.
+#
+# Every page under /t/ is static: dates, estimates, actuals and insights change daily but
+# nothing regenerated them, so within weeks the pages Google crawls would disagree with the
+# API again (the SCHW problem in slow motion). This rebuilds all of it from the live API
+# before the US market opens and commits only when something actually changed.
+#
+# If the API is down the build FAILS LOUDLY and commits nothing — last-good pages stay up.
+# That is deliberate: build.py raises on fetch failure rather than writing pages full of
+# holes, a lesson paid for when a silent default dropped Kimberly-Clark from the site.
+name: rebuild ticker pages
+on:
+  schedule:
+    - cron: "15 9 * * *"     # 09:15 UTC = pre-market ET, after the overnight ingest cycles
+  workflow_dispatch: {}       # and on demand
+permissions:
+  contents: write
+concurrency:
+  group: rebuild
+  cancel-in-progress: false
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: build ticker pages
+        run: python tools/build.py --top 1200
+      - name: rebuild existing transcript pages
+        run: |
+          SYMS=$(for d in t/*/; do [ -f "$d/transcript.html" ] && basename "$d"; done | tr '\n' ' ')
+          if [ -n "$SYMS" ]; then python tools/build_transcripts.py $SYMS; else echo "no transcript pages yet"; fi
+      - name: directory + sitemap + parent links (fails if surfaces disagree)
+        run: python tools/postbuild.py
+      - name: commit if changed
+        run: |
+          git config user.name "er-rebuild-bot"
+          git config user.email "retail.picksllc@gmail.com"
+          git add -A t/ tickers.html sitemap.xml
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "nightly rebuild: $(date -u +%F) — pages regenerated from the live API"
+            git push
+          fi

@@ -45,7 +45,13 @@ window.erWatch = {
     _wlSave();
     const u = auth.currentUser;
     if (u) setDoc(doc(_fs, "users", u.uid),
-      { watchlist: on ? arrayUnion(s) : arrayRemove(s) }, { merge: true }).catch(() => {});
+      { watchlist: on ? arrayUnion(s) : arrayRemove(s) }, { merge: true }).catch((e) => {
+        // A swallowed failure here is invisible everywhere: the star lights up from
+        // localStorage, the user believes it took, and the server never hears -- which is
+        // indistinguishable from "20 subscribers, 20 empty watchlists". Say something.
+        console.warn("watchlist sync failed:", e && e.code, e && e.message);
+        if (typeof toast === "function") toast("Couldn't sync your watchlist — star saved on this device only");
+      });
     return on;
   },
   onChange(f) { _wlCbs.push(f); },
