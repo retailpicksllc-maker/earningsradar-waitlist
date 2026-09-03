@@ -67,7 +67,8 @@ const app = initializeApp({
 });
 const auth = getAuth(app), fs = getFirestore(app);
 const $ = (s) => document.querySelector(s);
-let ROWS = [], sortKey = "lastSeen", sortDir = -1;
+let ROWS = [], sortKey = "lastSeen", sortDir = -1, ME = "";
+const DAY = 86400000;
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -90,6 +91,29 @@ function ago(d) {
   if (s < 86400) return Math.round(s / 3600) + "h ago";
   if (s < 86400 * 30) return Math.round(s / 86400) + "d ago";
   return Math.round(s / 86400 / 30) + "mo ago";
+}
+// How long an account was held: signup to last sign-in. This is the per-row retention, and the
+// page had no column for it — you could read every row and still not see that almost nobody has a
+// gap wider than one session.
+function heldMs(r) {
+  return (r.created && r.lastSeen) ? (r.lastSeen.getTime() - r.created.getTime()) : null;
+}
+// A return is a SEPARATE visit on another day, so it is measured as a 24-hour gap rather than a
+// change of calendar date. An account created 23:56 and last seen 00:03 changes date after seven
+// minutes; counting that as retained is how a 1 becomes a 2.
+function didReturn(r) { return r.held != null && r.held >= DAY; }
+function heldFmt(ms) {
+  if (ms == null || ms < 60000) return "—";
+  if (ms < 3600000) return Math.round(ms / 60000) + "m";
+  if (ms < 2 * DAY) return (ms / 3600000).toFixed(1) + "h";
+  return Math.round(ms / DAY) + "d";
+}
+function heldNote(r) {
+  if (r.held == null) return "";
+  if (r.held >= DAY) return '<div class="live">returned</div>';
+  if (r.created && r.lastSeen && r.created.toDateString() !== r.lastSeen.toDateString())
+    return '<div class="mut">crosses midnight</div>';
+  return "";
 }
 function dur(sec) {
   sec = +sec || 0;
@@ -117,6 +141,7 @@ async function load() {
         optout: !!u.digest_optout
       };
     });
+    ROWS.forEach((r) => { r.held = heldMs(r); });
     render();
   } catch (e) {
     $("#out").innerHTML = '<div class="msg">Could not read accounts (' + esc(e.code || e.message) +
@@ -125,13 +150,23 @@ async function load() {
 }
 
 function render() {
-  const day = 86400000, now = Date.now();
-  const active7 = ROWS.filter((r) => r.lastSeen && now - r.lastSeen.getTime() < 7 * day).length;
+  const day = DAY, now = Date.now();
+  // Your own account is excluded from the rates. It is the most active row in the table by two
+  // orders of magnitude and it is not a customer; leaving it in was quietly holding the numbers up.
+  const peers = ROWS.filter((r) => (r.email || "").toLowerCase() !== (ME || "").toLowerCase());
+  const back = peers.filter(didReturn).length;
+  const pct = peers.length ? (back / peers.length * 100).toFixed(1) : "0.0";
+  // "Active (7d)" counted a signup as an active, so it tracked traffic rather than retention: it
+  // read 21 against 20 new in the same week while Firebase put daily actives at 2. It could never
+  // read low, which made it useless precisely when it mattered. A RETURNING user is one who was
+  // already here before the window opened.
+  const returning7 = peers.filter((r) => r.lastSeen && now - r.lastSeen.getTime() < 7 * day
+                                      && r.created && now - r.created.getTime() >= 7 * day).length;
   const new7 = ROWS.filter((r) => r.created && now - r.created.getTime() < 7 * day).length;
   const watchers = ROWS.filter((r) => r.watch > 0).length;
   $("#stats").innerHTML =
-    [["Total accounts", ROWS.length], ["Active (7d)", active7], ["New (7d)", new7],
-     ["With watchlists", watchers]]
+    [["Total accounts", ROWS.length], ["Returned · excl. you", `${back} · ${pct}%`],
+     ["Returning (7d)", returning7], ["New (7d)", new7], ["With watchlists", watchers]]
     .map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
 
   const rows = [...ROWS].sort((a, b) => {
@@ -144,15 +179,17 @@ function render() {
     `<th data-k="${k}">${label}${sortKey === k ? (sortDir === -1 ? " ↓" : " ↑") : ""}</th>`;
   $("#out").innerHTML = `<table><thead><tr>
       ${th("email", "Account")}${th("lastSeen", "Last signed in")}${th("created", "Signed up")}
-      ${th("visits", "Visits")}${th("seconds", "Time on site")}${th("watch", "Watchlist")}
+      ${th("held", "Held")}${th("visits", "Visits")}${th("seconds", "Time on site")}${th("watch", "Watchlist")}
     </tr></thead><tbody>` +
     rows.map((r) => `<tr>
       <td><div class="em">${esc(r.email || "(no email)")}</div>
           <div class="mut">${esc(r.name || "")} ${r.provider ? `<span class="pill">${esc(r.provider)}</span>` : ""}</div></td>
       <td>${fmt(r.lastSeen)}<div class="mut">${ago(r.lastSeen)}</div></td>
       <td>${fmt(r.created)}<div class="mut">${ago(r.created)}</div></td>
+      <td>${heldFmt(r.held)}${heldNote(r)}</td>
       <td>${r.visits}</td>
-      <td>${dur(r.seconds)}</td>
+      <td>${dur(r.seconds)}${(r.visits > 0 && !r.seconds)
+            ? '<div class="mut">not recorded</div>' : ""}</td>
       <td>${r.watch || "—"}${r.optout ? '<div class="mut">no digest</div>' : ""}</td>
     </tr>`).join("") + "</tbody></table>";
 
@@ -166,9 +203,11 @@ function render() {
 }
 
 $("#csv").onclick = () => {
-  const head = ["email", "name", "provider", "signed_up", "last_signed_in", "visits", "seconds", "watchlist"];
+  const head = ["email", "name", "provider", "signed_up", "last_signed_in", "held_hours",
+                "returned", "visits", "seconds", "watchlist"];
   const body = ROWS.map((r) => [r.email, r.name, r.provider,
     r.created ? r.created.toISOString() : "", r.lastSeen ? r.lastSeen.toISOString() : "",
+    r.held == null ? "" : (r.held / 3600000).toFixed(2), didReturn(r) ? "yes" : "no",
     r.visits, r.seconds, r.watch]);
   const csv = [head, ...body].map((line) =>
     line.map((v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -184,7 +223,7 @@ onAuthStateChanged(auth, (u) => {
     $("#signin").textContent = "Sign out";
     $("#signin").onclick = () => signOut(auth);
     $("#refresh").style.display = $("#csv").style.display = "";
-    $("#who").textContent = u.email || "";
+    $("#who").textContent = ME = u.email || "";
     load();
   } else {
     $("#signin").textContent = "Sign in with Google";
