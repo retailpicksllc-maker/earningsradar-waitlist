@@ -98,10 +98,18 @@ function ago(d) {
 function heldMs(r) {
   return (r.created && r.lastSeen) ? (r.lastSeen.getTime() - r.created.getTime()) : null;
 }
-// A return is a SEPARATE visit on another day, so it is measured as a 24-hour gap rather than a
-// change of calendar date. An account created 23:56 and last seen 00:03 changes date after seven
-// minutes; counting that as retained is how a 1 becomes a 2.
-function didReturn(r) { return r.held != null && r.held >= DAY; }
+// A return is a SEPARATE visit on another day. Two conditions, because either one alone is
+// wrong: a bare change of calendar date counts an account created 23:56 and last seen 00:03 as
+// retained after seven minutes, and a bare 24-hour gap throws away someone who signed up at
+// 4:07pm and came back at 3:44pm the next day — a real second visit, 23.6 hours apart, which the
+// first version of this rule was labelling "crosses midnight" and excluding. Different day AND a
+// gap long enough that it cannot be one sitting.
+const RETURN_MIN_MS = 4 * 3600000;
+function didReturn(r) {
+  if (r.held == null || !r.created || !r.lastSeen) return false;
+  if (r.created.toDateString() === r.lastSeen.toDateString()) return false;
+  return r.held >= RETURN_MIN_MS;
+}
 function heldFmt(ms) {
   if (ms == null || ms < 60000) return "—";
   if (ms < 3600000) return Math.round(ms / 60000) + "m";
@@ -110,7 +118,7 @@ function heldFmt(ms) {
 }
 function heldNote(r) {
   if (r.held == null) return "";
-  if (r.held >= DAY) return '<div class="live">returned</div>';
+  if (didReturn(r)) return '<div class="live">returned</div>';
   if (r.created && r.lastSeen && r.created.toDateString() !== r.lastSeen.toDateString())
     return '<div class="mut">crosses midnight</div>';
   return "";
