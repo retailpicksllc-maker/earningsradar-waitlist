@@ -250,16 +250,28 @@ def build(sym, universe=None):
         when = "not yet scheduled"
         lede = f"{name} ({sym}) has no confirmed next earnings date."
 
-    beats = sum(1 for q in past if q.get("eps_est") and q["eps_act"] >= q["eps_est"])
+    # The surprise comes from the API, which withholds it when the actual and estimate are on
+    # different bases (a GAAP number beside a non-GAAP consensus). This page used to compute its
+    # own from raw est/act and printed "$7.04 +43.4%" for Dell on a quarter the API correctly
+    # refused to score. A beat is only a beat when the API says so; otherwise show the two facts
+    # and no claim -- the same rule the calendar follows.
+    def _sp(q):
+        return q.get("surprise_eps_pct")
+    scored = [q for q in past if _sp(q) is not None]
+    beats = sum(1 for q in scored if float(_sp(q)) >= 0)
+    # No scored quarters (every actual on an unscored basis) -> say nothing rather than
+    # "0 of its last 0", which reads as a broken page.
+    streak_html = ('<p style="margin-top:14px;color:var(--mu);font-size:14px">'
+                   f'{html.escape(sym)} has beaten consensus EPS in <strong>{beats} of its last '
+                   f'{len(scored)}</strong> scored quarters.</p>') if scored else ""
     rows = "".join(
         "<tr><td>{d}</td><td>{fq}</td><td>{ee}</td><td>{ea}</td>"
         "<td class='{cls}'>{sp}</td><td>{rv}</td></tr>".format(
             d=str(q["report_date"])[:10],
             fq=f"FY{q.get('fiscal_year','')} {q.get('fiscal_quarter','')}".strip(),
             ee=eps(q.get("eps_est")), ea=eps(q.get("eps_act")),
-            cls=("beat" if (q.get("eps_est") and q["eps_act"] >= q["eps_est"]) else "miss"),
-            sp=("—" if not q.get("eps_est") else
-                f"{(q['eps_act']-q['eps_est'])/abs(q['eps_est'])*100:+.1f}%"),
+            cls=("" if _sp(q) is None else ("beat" if float(_sp(q)) >= 0 else "miss")),
+            sp=("—" if _sp(q) is None else f"{float(_sp(q)):+.1f}%"),
             rv=money(q.get("rev_act")))
         for q in past)
 
@@ -271,11 +283,11 @@ def build(sym, universe=None):
     ld = {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{
         "@type": "Question", "name": f"When does {name} ({sym}) report earnings?",
         "acceptedAnswer": {"@type": "Answer", "text": lede}}]}
-    if past:
+    if scored:
         ld["mainEntity"].append({
             "@type": "Question", "name": f"Does {sym} usually beat earnings estimates?",
             "acceptedAnswer": {"@type": "Answer", "text":
-                f"{sym} has beaten consensus EPS in {beats} of its last {len(past)} reported quarters."}})
+                f"{sym} has beaten consensus EPS in {beats} of its last {len(scored)} scored quarters."}})
 
     # Per-company prose. This is what stops 668 pages being one page with the numbers swapped.
     ov = _overview(sym)
@@ -352,8 +364,7 @@ def build(sym, universe=None):
 <h2>Recent earnings history</h2>
 <table><thead><tr><th>Report date</th><th>Quarter</th><th>EPS est.</th><th>EPS actual</th><th>Surprise</th><th>Revenue</th></tr></thead>
 <tbody>{rows or '<tr><td colspan="6">No reported quarters yet.</td></tr>'}</tbody></table>
-<p style="margin-top:14px;color:var(--mu);font-size:14px">
-{html.escape(sym)} has beaten consensus EPS in <strong>{beats} of its last {len(past)}</strong> reported quarters.</p>
+{streak_html}
 {insight_html}
 {dividends_html}
 {crumbs_html}

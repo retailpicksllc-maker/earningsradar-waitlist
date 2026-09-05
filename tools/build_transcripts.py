@@ -124,21 +124,30 @@ def build(sym):
 
     ee, ea = q0.get("eps_est"), q0.get("eps_act")
     re_, ra = q0.get("rev_est"), q0.get("rev_act")
-    beat = (ee is not None and ea is not None and float(ea) >= float(ee))
-    verb = "beat" if beat else "missed"
-    streak = sum(1 for q in past[:8] if q.get("eps_est") and q.get("eps_act") is not None
-                 and float(q["eps_act"]) >= float(q["eps_est"]))
-    n = min(len(past), 8)
+    # Beat/miss only when the API scored it -- it withholds the surprise across mismatched
+    # bases, and a summary that calls a GAAP-vs-non-GAAP gap "a beat" is the exact fake claim
+    # this whole page type must never make.
+    sp0 = q0.get("surprise_eps_pct")
+    beat = (sp0 is not None and float(sp0) >= 0)
+    verb = ("beat" if beat else "missed") if sp0 is not None else None
+    scored = [q for q in past[:8] if q.get("surprise_eps_pct") is not None]
+    streak = sum(1 for q in scored if float(q["surprise_eps_pct"]) >= 0)
+    n = len(scored)
 
     # TL;DR: written from the numbers, not lifted from the call.
     tldr = [f"{name} ({sym}) reported {label} results on {rd_h}."]
     if ee is not None and ea is not None:
-        tldr.append(f"Earnings per share came in at {eps(ea)} against a {eps(ee)} consensus, "
-                    f"so the company {verb} on the bottom line.")
+        if verb:
+            tldr.append(f"Earnings per share came in at {eps(ea)} against a {eps(ee)} consensus, "
+                        f"so the company {verb} on the bottom line.")
+        else:
+            tldr.append(f"Earnings per share came in at {eps(ea)} against a {eps(ee)} consensus; "
+                        f"the two figures are reported on different bases, so no beat or miss is claimed.")
     if re_ is not None and ra is not None:
         rbeat = "above" if float(ra) >= float(re_) else "below"
         tldr.append(f"Revenue of {money(ra)} landed {rbeat} the {money(re_)} estimate.")
-    tldr.append(f"{sym} has beaten consensus EPS in {streak} of its last {n} reported quarters.")
+    if n:
+        tldr.append(f"{sym} has beaten consensus EPS in {streak} of its last {n} scored quarters.")
     tldr.append("Highlights from management's remarks on the call are below.")
 
     ov = OVERVIEWS.get(sym)
@@ -175,8 +184,11 @@ def build(sym):
          "acceptedAnswer": {"@type": "Answer", "text": " ".join(tldr)}},
         {"@type": "Question", "name": f"Did {sym} beat earnings in {label}?",
          "acceptedAnswer": {"@type": "Answer",
-            "text": f"{name} {verb} consensus EPS in {label}, reporting {eps(ea)} against "
-                    f"a {eps(ee)} estimate on {rd_h}."}}]}, separators=(",", ":"))
+            "text": (f"{name} {verb} consensus EPS in {label}, reporting {eps(ea)} against "
+                     f"a {eps(ee)} estimate on {rd_h}." if verb else
+                     f"{name} reported {eps(ea)} against a {eps(ee)} estimate in {label} on {rd_h}; "
+                     f"the figures are on different bases, so no beat or miss is claimed.")}}]},
+            separators=(",", ":"))
 
     doc = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
