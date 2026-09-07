@@ -2611,6 +2611,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   }
 
   function start(opts){
+    try{ (window._obTrail=window._obTrail||[]).push(['start', !!(opts&&opts.account), !!(window.erWatch&&erWatch.signedIn()), Math.round(performance.now())]); }catch(e){}
     if(window._erOnboarding) return;
     // Policy (when to show) lives in maybeStart and the account sync; start() always runs.
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
@@ -2636,6 +2637,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   try{ VISITS=+(localStorage.getItem('er_visits')||0); if(sessionStorage.getItem('er_visit_counted')!=='1'){ VISITS+=1; localStorage.setItem('er_visits',String(VISITS)); sessionStorage.setItem('er_visit_counted','1'); } }catch(e){}
   function maybeStart(){
     window._erOnboardDecided=true;
+    try{ (window._obTrail=window._obTrail||[]).push(['maybeStart', !!(window.erWatch&&erWatch.signedIn()), Math.round(performance.now())]); }catch(e){}
     if(window._erOnboarding) return;
     if(window.erWatch&&erWatch.signedIn()) return;
     // Forced: a refresh brings it straight back. Only finishing it (this session) or signing
@@ -2674,7 +2676,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907j">
+<script type="module" src="auth.js?v=20260907k">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,

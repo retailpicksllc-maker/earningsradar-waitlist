@@ -90,6 +90,7 @@ async function _wlSync(user) {
     // A device that saw this account finish the flow remembers it, so a write lost to a quick
     // reload cannot bring the flow back; the flag is re-sent here until the record carries it.
     let doneHere = false; try { doneHere = localStorage.getItem("er_ob_done_" + user.uid) === "1"; } catch (e) {}
+    try { (window._obTrail = window._obTrail || []).push(["sync", data.onboarded || null, doneHere, Math.round(performance.now())]); } catch (e) {}
     if (!data.onboarded && doneHere) { window.erMarkOnboarded("done"); }
     else if (!data.onboarded && typeof window.erOnboard === "function")
       setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
@@ -603,6 +604,7 @@ q("[data-vcheck]").onclick = async () => {
 let _authResolved = false;
 onAuthStateChanged(auth, (user) => {
   const initial = !_authResolved; _authResolved = true;
+  try { (window._obTrail = window._obTrail || []).push(["auth", !!user, initial, Math.round(performance.now())]); } catch (e) {}
   // Tell the page the session question is settled (the onboarding auto-start waits for this:
   // deciding at 700ms, before Firebase had answered, let a stale synced list mark a signed-out
   // visitor as "already onboarded" and then get cleared a second later).
