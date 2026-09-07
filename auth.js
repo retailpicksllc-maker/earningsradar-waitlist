@@ -91,19 +91,17 @@ async function _wlSync(user) {
     // next visit; a completed or skipped run is never replayed.
     // A device that saw this account finish the flow remembers it, so a write lost to a quick
     // reload cannot bring the flow back; the flag is re-sent here until the record carries it.
-    let doneHere = false; try { doneHere = localStorage.getItem("er_ob_done_" + user.uid) === "1"; } catch (e) {}
-    try { (window._obTrail = window._obTrail || []).push(["sync", data.onboarded || null, doneHere, Math.round(performance.now())]); } catch (e) {}
-    if (!data.onboarded && doneHere) { window.erMarkOnboarded("done"); }
-    else if (!data.onboarded && typeof window.erOnboard === "function") {
-      // Fire only if the visitor flow is not already running / just finished (signing up from
-      // its step 2 is the normal path) -- start() checks that too, this just avoids the timer.
-      if (!window._erOnboarding)
-        setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
-    }
-    else if (data.onboarded) {
-      try { localStorage.setItem("er_onboarded", "1"); } catch (e) {}
-      if (window._erOnboarding && !window._erOnboardingAccount && window.erOnboardClose) window.erOnboardClose();
-    }
+    // An account is past onboarding by definition -- the picking happened before or during
+    // sign-up. Record that, and close a visitor flow if one is still up.
+    try { (window._obTrail = window._obTrail || []).push(["sync", data.onboarded || null, !!data.installPrompted, Math.round(performance.now())]); } catch (e) {}
+    try { localStorage.setItem("er_onboarded", "1"); } catch (e) {}
+    if (!data.onboarded) window.erMarkOnboarded("done");
+    if (window._erOnboarding && !window._erOnboardingAccount && window.erOnboardClose) window.erOnboardClose();
+    // The one thing still worth asking a signed-in person: put the app on your home screen.
+    // Once per account, and only from the second visit (app.html decides the visit rule).
+    let askedHere = false; try { askedHere = localStorage.getItem("er_inst_asked_" + user.uid) === "1"; } catch (e) {}
+    if (!data.installPrompted && !askedHere && typeof window.erOnboard === "function" && !window._erOnboarding)
+      setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
   } catch (e) { console.warn("watchlist sync failed:", e && e.code, e && e.message); }
 }
 window.erMarkOnboarded = (state) => {
@@ -111,6 +109,12 @@ window.erMarkOnboarded = (state) => {
   try { if ((state || "done") === "done") localStorage.setItem("er_ob_done_" + u.uid, "1"); } catch (e) {}
   return setDoc(doc(_fs, "users", u.uid), { onboarded: state || "done", onboardedAt: serverTimestamp() }, { merge: true })
     .catch((e) => console.warn("onboarded flag write failed:", e && e.code, e && e.message));
+};
+window.erMarkInstallPrompted = () => {
+  const u = auth.currentUser; if (!u || _deleting) return;
+  try { localStorage.setItem("er_inst_asked_" + u.uid, "1"); } catch (e) {}
+  return setDoc(doc(_fs, "users", u.uid), { installPrompted: true, installPromptedAt: serverTimestamp() }, { merge: true })
+    .catch((e) => console.warn("installPrompted write failed:", e && e.code, e && e.message));
 };
 // Read-only view of the signed-in account's record, for checking what the server actually holds.
 window.erAccountDoc = async () => {
