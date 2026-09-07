@@ -90,11 +90,18 @@ async function _wlSync(user) {
     if (!data.onboarded && typeof window.erOnboard === "function")
       setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
     else if (data.onboarded) { try { localStorage.setItem("er_onboarded", "1"); } catch (e) {} }
-  } catch (e) { /* offline: local list still works */ }
+  } catch (e) { console.warn("watchlist sync failed:", e && e.code, e && e.message); }
 }
 window.erMarkOnboarded = (state) => {
   const u = auth.currentUser; if (!u || _deleting) return;
-  setDoc(doc(_fs, "users", u.uid), { onboarded: state || "done", onboardedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+  setDoc(doc(_fs, "users", u.uid), { onboarded: state || "done", onboardedAt: serverTimestamp() }, { merge: true })
+    .catch((e) => console.warn("onboarded flag write failed:", e && e.code, e && e.message));
+};
+// Read-only view of the signed-in account's record, for checking what the server actually holds.
+window.erAccountDoc = async () => {
+  const u = auth.currentUser; if (!u) return null;
+  try { const snap = await getDoc(doc(_fs, "users", u.uid)); return snap.exists() ? snap.data() : {}; }
+  catch (e) { return { error: (e && e.code) || String(e) }; }
 };
 
 /* Mirror each signed-in user into Firestore /users/{uid} — gives us our own browsable/exportable
