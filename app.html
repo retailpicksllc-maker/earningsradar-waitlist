@@ -539,7 +539,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obt:active{transform:scale(.94)}
   .obt .tile{position:relative;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
   .obt .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
-  .obt b{font-size:12px;letter-spacing:.02em} .obt small{font-size:10.5px;color:var(--muted);line-height:1.1;text-align:center}
+  .obt b{font-size:12px;letter-spacing:.02em} .obt small{font-size:10.5px;color:var(--muted);line-height:1.1;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .obt.on{border-color:var(--green);background:rgba(52,211,153,.10)}
   .obt.on::after{content:'✓';position:absolute;top:6px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--green);color:#052;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:obpop .25s}
   @keyframes obpop{from{transform:scale(.2)}to{transform:scale(1)}}
@@ -548,7 +548,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obres{display:flex;flex-wrap:wrap;gap:6px;min-height:0;margin-bottom:10px}
   .obres button{background:var(--card2);border:1px solid var(--border2);color:var(--text);border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer}
   .obres button.on{border-color:var(--green);color:var(--green)}
-  .obfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+  .obfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;position:sticky;bottom:-18px;padding:10px 0 4px;background:linear-gradient(180deg,rgba(13,20,48,0),#0d1430 35%)}
   .obcount{color:var(--muted);font-size:13px}
   .obcount b{color:var(--text)}
   .obnext{background:var(--grad);color:#fff;border:0;border-radius:12px;padding:12px 20px;font-weight:700;font-size:15px;cursor:pointer;min-width:150px;transition:opacity .2s,transform .12s}
@@ -2400,8 +2400,9 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     // US companies only: a first-timer's grid should not open with WuXi AppTec and Sun Hung Kai.
     const rows=DATA.filter(r=>r.date>=today&&r.date<=lim&&!/^[A-Z]{4}[FY]$/.test(r.symbol)&&!/[.\-]/.test(r.symbol)&&!(r.row&&r.row.foreign))
       .sort((a,b)=>(+String(b.marketCap).replace(/\D/g,'')||0)-(+String(a.marketCap).replace(/\D/g,'')||0));
-    for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=12) break; }
-    for(const p of POPULAR){ if(out.length>=16) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }
+    const want=(window.innerHeight<760)?12:16;      // short phones: three rows, no scrolling to reach Continue
+    for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=want-4) break; }
+    for(const p of POPULAR){ if(out.length>=want) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }
     return out;
   }
   function nextReport(s){
