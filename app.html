@@ -524,6 +524,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obchip:hover{background:rgba(251,191,36,.2)}
   #ob{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(6,9,22,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:14px}
   #ob.on{display:flex}
+  #ob.on.wait{display:none}
   .obcard{width:100%;max-width:520px;max-height:calc(100dvh - 28px);overflow:auto;background:linear-gradient(180deg,#121a3a,#0d1430);border:1px solid rgba(47,107,255,.35);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:22px 22px 18px;position:relative;animation:obin .32s cubic-bezier(.2,.8,.2,1)}
   @keyframes obin{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
   .obtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -2466,10 +2467,14 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     $id('obNext').onclick=()=>{
       if(signed){ next(); return; }
       erTrack('onboard_signin_click');
+      // Step aside while the sign-in modal is up: it sits below this overlay in the stacking
+      // order, so without this it opened underneath the card.
+      host.classList.add('wait');
       if(typeof openAuth==='function'){ openAuth('signup'); }
       else if(window.erWatch) erWatch.promptSignIn();
       // Resume the flow once the auth modal closes (signed in or not).
-      let seenOpen=false; const t=setInterval(()=>{ const a=document.querySelector('.erAuth'); const open=!!(a&&a.classList.contains('on')); if(open) seenOpen=true; if(seenOpen&&!open){ clearInterval(t); next(); } },500); setTimeout(()=>{ if(!seenOpen){ clearInterval(t); next(); } },4000);
+      const resume=()=>{ host.classList.remove('wait'); next(); };
+      let seenOpen=false; const t=setInterval(()=>{ const a=document.querySelector('.erAuth'); const open=!!(a&&a.classList.contains('on')); if(open) seenOpen=true; if(seenOpen&&!open){ clearInterval(t); resume(); } },300); setTimeout(()=>{ if(!seenOpen){ clearInterval(t); resume(); } },4000);
     };
     const l=$id('obLater'); if(l) l.onclick=()=>{ erTrack('onboard_signin_later'); next(); };
   }
