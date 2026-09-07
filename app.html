@@ -2566,9 +2566,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
 
   function start(opts){
     if(window._erOnboarding) return;
-    // {account:true}: the signed-in account has never been through this -- run it even if the
-    // device already holds stars (they show pre-selected; Continue is one tap).
-    if(opts&&opts.account){ /* forced */ } else if(LS('er_onboarded')==='1') return;
+    // Policy (when to show) lives in maybeStart and the account sync; start() always runs.
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
     window._erOnboarding=true; step=0;
     try{ sessionStorage.setItem('er_ob_seen','1'); }catch(e){}
