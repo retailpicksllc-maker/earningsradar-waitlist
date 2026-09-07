@@ -94,7 +94,10 @@ async function _wlSync(user) {
     if (!data.onboarded && doneHere) { window.erMarkOnboarded("done"); }
     else if (!data.onboarded && typeof window.erOnboard === "function")
       setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
-    else if (data.onboarded) { try { localStorage.setItem("er_onboarded", "1"); } catch (e) {} }
+    else if (data.onboarded) {
+      try { localStorage.setItem("er_onboarded", "1"); } catch (e) {}
+      if (window._erOnboarding && !window._erOnboardingAccount && window.erOnboardClose) window.erOnboardClose();
+    }
   } catch (e) { console.warn("watchlist sync failed:", e && e.code, e && e.message); }
 }
 window.erMarkOnboarded = (state) => {

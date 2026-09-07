@@ -2615,13 +2615,16 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     if(window._erOnboarding) return;
     // Policy (when to show) lives in maybeStart and the account sync; start() always runs.
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
-    window._erOnboarding=true; step=0;
+    window._erOnboarding=true; window._erOnboardingAccount=!!(opts&&opts.account); step=0;
     steps=['pick','week']; if(installMode()&&VISITS>=2) steps.push('install');
     host.classList.add('on'); erTrack('onboard_start',{steps:steps.length,mobile:isMobile()?1:0});
     if(!_NAMES) fetch('names.json').then(r=>r.ok?r.json():{}).then(j=>{ _NAMES=j||{}; if(steps[step]==='pick') host.querySelectorAll('.obt small').forEach(el=>{ el.textContent=shortName(el.parentElement.dataset.s); }); }).catch(()=>{});
     render();
   }
   window.erOnboard=start;
+  // The session answer arrived late and the account has already been through this: close the
+  // visitor flow that started in the meantime, without marking anything.
+  window.erOnboardClose=()=>{ if(!window._erOnboarding||!host) return; host.classList.remove('on'); host.innerHTML=''; window._erOnboarding=false; erTrack('onboard_closed_signed_in'); };
 
   // Auto-start for first-time visitors -- but only once auth.js has settled whether there is a
   // session. Signed-in accounts are handled by the watchlist sync (once per account); a
