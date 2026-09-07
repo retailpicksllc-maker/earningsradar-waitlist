@@ -1095,6 +1095,9 @@ document.querySelectorAll('.viewswitch .vbtn').forEach(function(b){ b.onclick=fu
     erTrack('mystocks_toggle',{on:_myOnly?1:0}); paint(); renderCalendar();
   };
   paint();
+  // Sign-out / account deletion wipes the local watchlist; a My Stocks filter over an empty list
+  // would render a blank calendar, so drop the filter and show everything again.
+  window.addEventListener('er:signedout',()=>{ _myOnly=false; paint(); try{ renderCalendar(); }catch(e){} if(typeof PAGE!=='undefined'&&PAGE==='my'){ try{ renderMyPage(); }catch(e){} } });
   const wire=()=>{ if(window.erWatch){ erWatch.onChange(()=>{ paint(); renderCalendar(); loadLiveCalendar();
       // Watchlist arrives from Firestore a beat after load — repaint My Stocks so landing
       // directly on #mystocks doesn't show the empty state to a user who has starred stocks.

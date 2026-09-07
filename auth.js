@@ -34,6 +34,18 @@ function _wlSave() {
   try { localStorage.setItem("er_watchlist", JSON.stringify([..._wl])); } catch (e) {}
   _wlCbs.forEach((f) => { try { f([..._wl]); } catch (e) {} });
 }
+// Everything this browser remembers about the person: the watchlist, the My Stocks filter,
+// onboarding state, recent searches. Cleared on sign-out and account deletion so the next person
+// on this device does not inherit a stranger's stars (and "My Stocks" cannot show a list that
+// no longer belongs to anyone).
+let _deleting = false;
+function _forgetLocal() {
+  _wl.clear();
+  ["er_watchlist", "er_myonly", "er_onboarded", "er_recent"].forEach((k) => { try { localStorage.removeItem(k); } catch (e) {} });
+  try { sessionStorage.removeItem("er_auth_prompted"); } catch (e) {}
+  _wlSave();
+  try { window.dispatchEvent(new CustomEvent("er:signedout")); } catch (e) {}
+}
 window.erWatch = {
   list: () => [..._wl],
   has: (s) => _wl.has(String(s || "").toUpperCase()),
@@ -44,7 +56,7 @@ window.erWatch = {
     const on = !_wl.has(s); if (on) _wl.add(s); else _wl.delete(s);
     _wlSave();
     const u = auth.currentUser;
-    if (u) setDoc(doc(_fs, "users", u.uid),
+    if (u && !_deleting) setDoc(doc(_fs, "users", u.uid),
       { watchlist: on ? arrayUnion(s) : arrayRemove(s) }, { merge: true }).catch((e) => {
         // A swallowed failure here is invisible everywhere: the star lights up from
         // localStorage, the user believes it took, and the server never hears -- which is
@@ -72,6 +84,7 @@ async function _wlSync(user) {
    account list (email, name, provider, signup date, last seen). Rules allow each user to write
    only their own doc; no public reads. Best-effort: a Firestore hiccup must never break auth. */
 function _mirrorUser(user) {
+  if (_deleting) return;
   try {
     setDoc(doc(_fs, "users", user.uid), {
       email: user.email || null,
@@ -97,7 +110,7 @@ function _tPause() { if (_tActive != null) { _tAccum += (Date.now() - _tActive) 
 function _tFlush() {
   _tPause(); _tStart();
   const s = Math.round(_tAccum);
-  if (!auth.currentUser || s < 5) return;
+  if (!auth.currentUser || _deleting || s < 5) return;
   _tAccum = 0;
   try {
     setDoc(doc(_fs, "users", auth.currentUser.uid),
@@ -389,7 +402,7 @@ q("[data-forgot]").onclick = async () => {
   catch (err) { showError(err); }
 };
 
-q("[data-signout]").onclick = () => signOut(auth);
+q("[data-signout]").onclick = async () => { _tFlush(); await signOut(auth); _forgetLocal(); };
 
 /* account deletion — requires re-entering the password (or a Google re-auth popup) first */
 q("[data-delopen]").onclick = () => {
@@ -418,15 +431,28 @@ q("[data-delconfirm]").onclick = async () => {
     } else {
       await reauthenticateWithPopup(user, new GoogleAuthProvider());
     }
+    // From here nothing may write to /users/{uid} again: the 2-minute time flush, the watchlist
+    // sync and the sign-in mirror all used to race this and could quietly re-create the doc a
+    // moment after it was deleted -- which is what "the account is still there" looked like.
+    _deleting = true;
     // Remove the Firestore mirror BEFORE deleting auth (rules require the user's own uid).
-    try { await deleteDoc(doc(_fs, "users", user.uid)); } catch (e) {}
+    // Not swallowed any more: if the rules refuse the delete we want to know, not guess.
+    let docErr = null;
+    try { await deleteDoc(doc(_fs, "users", user.uid)); } catch (e) { docErr = e; console.warn("users doc delete failed:", e && e.code, e && e.message); }
     await deleteUser(user);
-    _pendingMsg = { cls: "msg ok", text: "Your account has been deleted." };
+    _forgetLocal();
+    _pendingMsg = docErr
+      ? { cls: "msg err", text: "Your sign-in was deleted, but your profile record could not be removed (" + (docErr.code || "error") + "). Tell us and we'll clear it." }
+      : { cls: "msg ok", text: "Your account has been deleted." };
+    try { window.erTrack && window.erTrack("account_deleted", { doc_removed: docErr ? 0 : 1 }); } catch (e) {}
   } catch (err) {
+    _deleting = false;
     const c = err && err.code;
+    console.warn("account delete failed:", c, err && err.message);
     m.textContent = c === "auth/invalid-credential" || c === "auth/wrong-password" ? "Wrong password."
       : c === "auth/too-many-requests" ? "Too many attempts — try again in a few minutes."
       : c === "auth/popup-closed-by-user" ? "Confirmation was cancelled."
+      : c === "auth/requires-recent-login" ? "Please sign out, sign back in, and try again."
       : "Couldn't delete the account (" + (c || "error") + ").";
   }
   btn.disabled = false;
@@ -578,6 +604,7 @@ onAuthStateChanged(auth, (user) => {
     // Signed in: release the gate. If the mandatory prompt was up, close it so they land in the calendar.
     if (_gated) { _gated = false; const x=q("[data-close]"); if(x) x.style.display=""; if (root.classList.contains("on")) close(); }
   } else {
+    _deleting = false;
     q('[data-view="form"]').style.display = "block";
     q('[data-view="acct"]').style.display = "none";
     setMode("signin");
