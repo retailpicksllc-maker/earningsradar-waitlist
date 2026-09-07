@@ -1087,10 +1087,16 @@ document.querySelectorAll('.viewswitch .vbtn').forEach(function(b){ b.onclick=fu
 // My Stocks filter toggle
 (function(){
   const b=document.getElementById('myStocksBtn'); if(!b) return;
-  const paint=()=>{ b.classList.toggle('on',_myOnly);
-    const n=(window.erWatch?erWatch.list().length:0);
+  // "My Stocks" is an account feature. Signed out there is nothing to show -- stars picked
+  // before signing up are held on the device only to seed the account -- so no count, no
+  // filter, and the button is the way in to sign-in.
+  const signedIn=()=>!!(window.erWatch&&erWatch.signedIn());
+  const paint=()=>{ if(!signedIn()&&_myOnly){ _myOnly=false; try{localStorage.setItem('er_myonly','0');}catch(e){} }
+    b.classList.toggle('on',_myOnly);
+    const n=signedIn()?erWatch.list().length:0;
     b.textContent='★ My Stocks'+(n?` (${n})`:''); };
   b.onclick=()=>{
+    if(!signedIn()){ if(typeof openAuth==='function') openAuth('signin'); else toast('Sign in to see your stocks'); return; }
     if(!_myOnly && (!window.erWatch||!erWatch.list().length)){ toast('Tap the ★ on any ticker to start your watchlist'); return; }
     _myOnly=!_myOnly; try{localStorage.setItem('er_myonly',_myOnly?'1':'0');}catch(e){}
     erTrack('mystocks_toggle',{on:_myOnly?1:0}); paint(); renderCalendar();
@@ -1099,6 +1105,7 @@ document.querySelectorAll('.viewswitch .vbtn').forEach(function(b){ b.onclick=fu
   // Sign-out / account deletion wipes the local watchlist; a My Stocks filter over an empty list
   // would render a blank calendar, so drop the filter and show everything again.
   window.addEventListener('er:signedout',()=>{ _myOnly=false; paint(); try{ renderCalendar(); }catch(e){} if(typeof PAGE!=='undefined'&&PAGE==='my'){ try{ renderMyPage(); }catch(e){} } });
+  window.addEventListener('er:auth',()=>{ paint(); try{ renderCalendar(); }catch(e){} if(typeof PAGE!=='undefined'&&PAGE==='my'){ try{ renderMyPage(); }catch(e){} } });
   const wire=()=>{ if(window.erWatch){ erWatch.onChange(()=>{ paint(); renderCalendar(); loadLiveCalendar();
       // Watchlist arrives from Firestore a beat after load — repaint My Stocks so landing
       // directly on #mystocks doesn't show the empty state to a user who has starred stocks.
@@ -2134,7 +2141,12 @@ function renderEarnPage(){
 }
 function renderMyPage(){
   const el=document.getElementById('pageMy'); if(!el) return;
-  const list=(window.erWatch?erWatch.list():[]);
+  if(!(window.erWatch&&erWatch.signedIn())){
+    el.innerHTML=`<div class="ptitle"><h1>My Stocks</h1></div>
+      <div class="pempty">Sign in to keep a watchlist and get emailed when your stocks report.<br><br><a href="#" class="cta" data-auth-open="signin" onclick="event.preventDefault();if(typeof openAuth==='function')openAuth('signin')">Sign in</a></div>`;
+    return;
+  }
+  const list=erWatch.list();
   if(!list.length){
     el.innerHTML=`<div class="ptitle"><h1>My Stocks</h1></div>
       <div class="pempty">You haven't starred any stocks yet.<br>Tap the ★ on any stock in the calendar to watch it here.</div>`;
@@ -2518,7 +2530,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
       <p class="sub">${first?`First up: <b style="color:var(--text)">${first.sym}</b> ${first.when.toLowerCase()==='today'?'today':first.when.toLowerCase()==='tomorrow'?'tomorrow':'on '+first.when}${first.sess?' '+first.sess:''}.`:'We will flag your first report the moment a date is set.'}</p>
       <div class="obchecks">
         <div><i>✓</i>Watching ${n} stock${n===1?'':'s'}</div>
-        <div class="${signed?'':'no'}"><i>${signed?'✓':'·'}</i>${signed?'Result alerts on':'Alerts off — sign in any time'}</div>
+        <div class="${signed?'':'no'}"><i>${signed?'✓':'·'}</i>${signed?'Result alerts on':'Not saved yet — sign in to keep them and get alerts'}</div>
         <div class="${inst?'':'no'}"><i>${inst?'✓':'·'}</i>${inst?'On your home screen':'Not installed yet'}</div>
       </div>
       <button class="obnext" id="obNext" style="width:100%">Open my calendar</button></div>`;
@@ -2548,7 +2560,9 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const chip=$id('obChip'); if(chip) chip.style.display=(completed||wl.list().length>=3)?'none':'';
-    if(completed&&wl.list().length){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
+    const signed=!!(window.erWatch&&erWatch.signedIn());
+    if(completed&&wl.list().length&&signed){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
+    else if(completed&&wl.list().length){ toast('Sign in any time to save these stocks and get alerts'); }
     erTrack(completed?'onboard_complete':'onboard_exit',{n:wl.list().length,step:steps[step]||'done'});
   }
 
