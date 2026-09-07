@@ -631,6 +631,13 @@ onAuthStateChanged(auth, (user) => {
   // deciding at 700ms, before Firebase had answered, let a stale synced list mark a signed-out
   // visitor as "already onboarded" and then get cleared a second later).
   setTimeout(() => { try { window.dispatchEvent(new CustomEvent("er:auth", { detail: { user: !!user, initial } })); } catch (e) {} }, 0);
+  // A brand-new account (created in the last couple of minutes, arriving after page load) is
+  // the moment worth celebrating -- the page listens and fires the confetti.
+  try {
+    const created = user && user.metadata && user.metadata.creationTime ? Date.parse(user.metadata.creationTime) : 0;
+    if (user && !initial && created && Date.now() - created < 2 * 60 * 1000)
+      setTimeout(() => { try { window.dispatchEvent(new CustomEvent("er:accountcreated")); } catch (e) {} }, 300);
+  } catch (e) {}
   const trigger = document.getElementById("authTrigger");
   // Hide "Create account" / sign-in CTAs across the page when signed in.
   document.querySelectorAll("[data-auth-open]").forEach((el) => { el.style.display = user ? "none" : ""; });

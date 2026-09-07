@@ -2579,7 +2579,6 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
       </div>
       <button class="obnext" id="obNext" style="width:100%">Open my calendar</button></div>`;
     frame(inner,{skip:false});
-    confetti();
     $id('obNext').onclick=()=>finish(true);
   }
 
@@ -2595,6 +2594,9 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
       if(el<2.4) requestAnimationFrame(tick); else c.remove(); })(t0);
   }
 
+  // The celebration belongs to the moment the account exists, not to the install step.
+  window.erConfetti=confetti;
+  window.addEventListener('er:accountcreated',()=>{ try{ confetti(); }catch(e){} });
   function next(){ step++; if(step>=steps.length){ renderDone(); return; } render(); }
   function render(){
     // Hard rule: a signed-in person is never shown the stock picker, whatever scheduled this.
@@ -2706,7 +2708,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907o">
+<script type="module" src="auth.js?v=20260907p">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,
