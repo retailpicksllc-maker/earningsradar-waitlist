@@ -87,14 +87,19 @@ async function _wlSync(user) {
     // Every account goes through onboarding exactly once, recorded on the account itself so it
     // follows the person across devices. Existing accounts that never saw it get it on their
     // next visit; a completed or skipped run is never replayed.
-    if (!data.onboarded && typeof window.erOnboard === "function")
+    // A device that saw this account finish the flow remembers it, so a write lost to a quick
+    // reload cannot bring the flow back; the flag is re-sent here until the record carries it.
+    let doneHere = false; try { doneHere = localStorage.getItem("er_ob_done_" + user.uid) === "1"; } catch (e) {}
+    if (!data.onboarded && doneHere) { window.erMarkOnboarded("done"); }
+    else if (!data.onboarded && typeof window.erOnboard === "function")
       setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
     else if (data.onboarded) { try { localStorage.setItem("er_onboarded", "1"); } catch (e) {} }
   } catch (e) { console.warn("watchlist sync failed:", e && e.code, e && e.message); }
 }
 window.erMarkOnboarded = (state) => {
   const u = auth.currentUser; if (!u || _deleting) return;
-  setDoc(doc(_fs, "users", u.uid), { onboarded: state || "done", onboardedAt: serverTimestamp() }, { merge: true })
+  try { if ((state || "done") === "done") localStorage.setItem("er_ob_done_" + u.uid, "1"); } catch (e) {}
+  return setDoc(doc(_fs, "users", u.uid), { onboarded: state || "done", onboardedAt: serverTimestamp() }, { merge: true })
     .catch((e) => console.warn("onboarded flag write failed:", e && e.code, e && e.message));
 };
 // Read-only view of the signed-in account's record, for checking what the server actually holds.
