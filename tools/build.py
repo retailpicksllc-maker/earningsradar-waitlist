@@ -19,6 +19,17 @@ class FetchFailed(Exception):
     """The request did not succeed. Distinct from a successful empty answer."""
 
 
+
+def qlabel(q):
+    """Quarter named by the month it ended -- always true. fiscal_year/fiscal_quarter are
+    calendar labels, and printing them as "FY2026 Q3" on Dell's July-2026 quarter (Dell's
+    Q2 FY2027) is wrong for every company whose fiscal year is not the calendar year."""
+    pe = str(q.get("fiscal_period_end") or "")[:10]
+    try:
+        return datetime.date.fromisoformat(pe).strftime("%b %Y") + " qtr"
+    except ValueError:
+        return f"{q.get('fiscal_quarter','')} {q.get('fiscal_year','')}".strip()
+
 def get(path, default=None, tries=3, timeout=30):
     """Fetch, retrying transient failures, and RAISE rather than return `default` if all fail.
 
@@ -268,7 +279,7 @@ def build(sym, universe=None):
         "<tr><td>{d}</td><td>{fq}</td><td>{ee}</td><td>{ea}</td>"
         "<td class='{cls}'>{sp}</td><td>{rv}</td></tr>".format(
             d=str(q["report_date"])[:10],
-            fq=f"FY{q.get('fiscal_year','')} {q.get('fiscal_quarter','')}".strip(),
+            fq=qlabel(q),
             ee=eps(q.get("eps_est")), ea=eps(q.get("eps_act")),
             cls=("" if _sp(q) is None else ("beat" if float(_sp(q)) >= 0 else "miss")),
             sp=("—" if _sp(q) is None else f"{float(_sp(q)):+.1f}%"),

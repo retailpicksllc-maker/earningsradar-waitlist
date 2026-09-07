@@ -1048,7 +1048,11 @@ function mapWorkerRow(w){
     // The API nulls surprise_eps_pct when it will not stand behind a beat/miss — ATH-PA is a
     // PREFERRED share carrying the common's 3.49 estimate against a meaningless 0.00. Carry that
     // decision through instead of letting the front end recompute one and print MISS -100.0%.
-    surpriseEps:(w.surprise_eps_pct!=null?+w.surprise_eps_pct:null)
+    // Explicit null in the payload = the API withheld the verdict. A payload that does not carry
+    // the field at all (older calendar-lite) leaves these undefined, and the row falls back to
+    // local arithmetic rather than blanking every surprise on the calendar.
+    surpriseEps:('surprise_eps_pct' in w)?(w.surprise_eps_pct!=null?+w.surprise_eps_pct:null):undefined,
+    surpriseRev:('surprise_rev_pct' in w)?(w.surprise_rev_pct!=null?+w.surprise_rev_pct:null):undefined
   };
   return {symbol:w.ticker, name:w.ticker, date:String(w.report_date||'').slice(0,10), time, marketCap:mktCap, row};
 }
@@ -1107,8 +1111,14 @@ function unitSuspect(o){
   const er=Math.abs(ea)/Math.abs(ee);
   return er>=3 || er<=0.34;
 }
-// EPS surprise for a calendar row, blanked when the units don't line up.
-function epsSurp(o){ return unitSuspect(o) ? '' : surprise(numv(o&&o.epsActual), numv(o&&o.eps)); }
+// The API nulls surprise_eps_pct / surprise_rev_pct when it will not stand behind a verdict
+// (actual on a different EPS basis than the estimate, revenue in a foreign currency, a
+// preferred share carrying the common's estimate). An explicit null with both figures present
+// means "withheld" — build-time rows never carry the key, so undefined means "not asked".
+function epsWithheld(o){ return !!o && o.eps!=null && o.epsActual!=null && o.surpriseEps===null; }
+function revWithheld(o){ return !!o && o.revenueEstimate!=null && o.revenueActual!=null && o.surpriseRev===null; }
+// EPS surprise for a calendar row, blanked when the units don't line up or the API declined.
+function epsSurp(o){ return (unitSuspect(o)||epsWithheld(o)) ? '' : surprise(numv(o&&o.epsActual), numv(o&&o.eps)); }
 // Revenue surprise, blanked when the percentage would be meaningless rather than informative:
 //  • the actual is in the company's local currency while the consensus is USD (ZTO x6.8 CNY,
 //    KOF x17.6 MXN, Nomura-class names x158 JPY) — EPS staying flat proves sales didn't 7x;
@@ -1133,6 +1143,7 @@ function revSuspect(re_, ra, ee, ea){
 }
 function revSurp(o){
   if(!o) return '';
+  if(revWithheld(o)) return '';
   return revSuspect(o.revenueEstimate,o.revenueActual,o.eps,o.epsActual)
     ? '' : surprise(numv(o.revenueActual), numv(o.revenueEstimate));
 }
@@ -1597,8 +1608,10 @@ function openDetail(sym,date){
   if(revE==null&&typeof REV_EST!=='undefined'&&REV_EST[sym])revE=numv(REV_EST[sym]['0q']!=null?REV_EST[sym]['0q']:Object.values(REV_EST[sym])[0]);
   const reported=(epsA!=null)||(revA!=null)||pastDate;
   if(reported){if(epsE==null)epsE=numv(h0.epsEst);if(epsA==null)epsA=numv(h0.epsAct);if(revE==null)revE=numv(h0.revEst);if(revA==null)revA=numv(h0.revAct);}
-  const _sus=unitSuspect({eps:epsE,epsActual:epsA,revenueEstimate:revE,revenueActual:revA});
-  const epsS=_sus?'':surprise(epsA,epsE), revS=revSuspect(revE,revA,epsE,epsA)?'':surprise(revA,revE);
+  const _sus=unitSuspect({foreign:rowObj.foreign,eps:epsE,epsActual:epsA,revenueEstimate:revE,revenueActual:revA});
+  // Same rule as the calendar row: if the API declined to state a surprise, don't invent one here.
+  const _epsW=epsWithheld(rowObj)&&epsA===numv(rowObj.epsActual), _revW=revWithheld(rowObj)&&revA===numv(rowObj.revenueActual);
+  const epsS=(_sus||_epsW)?'':surprise(epsA,epsE), revS=(_revW||revSuspect(revE,revA,epsE,epsA))?'':surprise(revA,revE);
   const news=(NEWS[sym]||[]).slice(0,5);
   const initial=(sym[0]||'?').toUpperCase();
   _detHost().innerHTML=`
@@ -1764,7 +1777,9 @@ function renderDetHist(hist){
       const _rr=(h.revEst&&h.revAct!=null)?Math.abs(numv(h.revAct))/Math.abs(numv(h.revEst)):null;
       const epsBad=_er!=null&&(_er>=3||_er<=0.34)&&(_rr==null||(_rr>=0.6&&_rr<=1.7));
       const epsActShown=epsBad?null:h.epsAct, revActShown=revBad?null:h.revAct;
-      const eS=epsBad?'':surprise(h.epsAct,h.epsEst), rS=revBad?'':surprise(h.revAct,h.revEst);
+      // h.epsW / h.revW: the API had both figures and still declined a verdict (basis mismatch).
+      // The actual is shown, uncoloured, with no percentage.
+      const eS=(epsBad||h.epsW)?'':surprise(h.epsAct,h.epsEst), rS=(revBad||h.revW)?'':surprise(h.revAct,h.revEst);
       return `<div class="r${i===0?' now':''}${i>=HCAP?' hhide':''}"><span class="q">${esc(h.qtr||'')}</span><span>${fmtEps(h.epsEst)}</span>`+
         `<span style="color:${col(eS)}">${fmtEps(epsActShown)}</span><span>${fmtRevM(h.revEst)}</span>`+
         `<span style="color:${col(rS)}">${fmtRevM(revActShown)}</span></div>`;}).join('')+
@@ -1778,8 +1793,11 @@ async function loadDetHistory(sym){
     // Earnings markers for the price chart: past report dates + EPS surprise.
     _cMarkers=qs.filter(q=>q.report_date&&q.eps_act!=null).map(q=>({
       date:String(q.report_date).slice(0,10),
-      label:(q.fiscal_quarter||'')+' FY'+(q.fiscal_year||''),
-      surp:surprise(q.eps_act,q.eps_est)}));
+      // Name the quarter by when it ended, which is always true. Our fiscal_year/quarter are
+      // calendar labels -- "Q3 FY2026" on Dell's July-2026 quarter, which Dell calls Q2 FY2027.
+      label:(q.fiscal_period_end?new Date(String(q.fiscal_period_end).slice(0,10)+'T00:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'})+' quarter':((q.fiscal_quarter||'')+' '+(q.fiscal_year||''))),
+      // Use the API's verdict; a null with both figures present is a withheld call, not a zero.
+      surp:(q.surprise_eps_pct!=null)?surprise(q.eps_act,q.eps_est):''}));
     renderPriceChart();
     const fmtQ=q=>{try{return new Date((q.fiscal_period_end||'')+'T00:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'});}catch(e){return (q.fiscal_quarter||'')+' '+(q.fiscal_year||'');}};
     // Union by quarter: HISTORY[sym] (build-time cache) carries revenue est/act +
@@ -1793,6 +1811,8 @@ async function loadDetHistory(sym){
       if(q.eps_act!=null) e.epsAct=q.eps_act;
       if(q.rev_est!=null) e.revEst=q.rev_est/1e6;
       if(q.rev_act!=null) e.revAct=q.rev_act/1e6;
+      e.epsW=(q.eps_est!=null&&q.eps_act!=null&&q.surprise_eps_pct==null);
+      e.revW=(q.rev_est!=null&&q.rev_act!=null&&q.surprise_rev_pct==null);
       byQ[k]=e; });
     const hist=Object.values(byQ)
       .sort((a,b)=>(new Date(b.qtr)-new Date(a.qtr))).slice(0,20);
@@ -2231,7 +2251,7 @@ function renderRail(){
         const o=r.row||{};
         // No verdict from the API = no verdict here. Recomputing one downstream is how a
         // preferred share ended up as the site's headline "MISS -100.0%".
-        const noCall=(o.eps!=null&&o.epsActual!=null&&o.surpriseEps==null);
+        const noCall=epsWithheld(o);
         const sus=unitSuspect(o)||noCall; const s=sus?'':((o.eps!=null)?surprise(o.epsActual,o.eps):'');
         const up=(o.eps!=null&&o.epsActual>=o.eps);
         return row(r.symbol, `EPS ${fmtEps(o.epsActual)} vs ${fmtEps(o.eps)}`,

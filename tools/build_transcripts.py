@@ -114,8 +114,13 @@ def build(sym):
         return None, "no reported quarter"
     q0 = past[0]
     name = (PROFILES.get(sym) or {}).get("name") or sym
-    fy, fq = q0.get("fiscal_year"), str(q0.get("fiscal_quarter") or "").upper()
-    label = f"{fq} FY{str(fy)[-2:]}" if fy and fq else "the latest quarter"
+    # Name the quarter by when it ended: fiscal_year/fiscal_quarter are calendar labels, and
+    # "Q3 FY26" on a July-2026 quarter is false for every non-calendar fiscal year (Dell: Q2 FY27).
+    try:
+        label = datetime.date.fromisoformat(
+            str(q0.get("fiscal_period_end"))[:10]).strftime("%B %Y") + " quarter"
+    except (TypeError, ValueError):
+        label = "latest quarter"
     rd = str(q0.get("report_date"))[:10]
     try:
         rd_h = datetime.date.fromisoformat(rd).strftime("%B %-d, %Y")
@@ -135,7 +140,7 @@ def build(sym):
     n = len(scored)
 
     # TL;DR: written from the numbers, not lifted from the call.
-    tldr = [f"{name} ({sym}) reported {label} results on {rd_h}."]
+    tldr = [f"{name} ({sym}) reported its {label} results on {rd_h}."]
     if ee is not None and ea is not None:
         if verb:
             tldr.append(f"Earnings per share came in at {eps(ea)} against a {eps(ee)} consensus, "
@@ -182,11 +187,11 @@ def build(sym):
     faq = json.dumps({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
         {"@type": "Question", "name": f"What did {name} say on its {label} earnings call?",
          "acceptedAnswer": {"@type": "Answer", "text": " ".join(tldr)}},
-        {"@type": "Question", "name": f"Did {sym} beat earnings in {label}?",
+        {"@type": "Question", "name": f"Did {sym} beat earnings in the {label}?",
          "acceptedAnswer": {"@type": "Answer",
-            "text": (f"{name} {verb} consensus EPS in {label}, reporting {eps(ea)} against "
+            "text": (f"{name} {verb} consensus EPS in the {label}, reporting {eps(ea)} against "
                      f"a {eps(ee)} estimate on {rd_h}." if verb else
-                     f"{name} reported {eps(ea)} against a {eps(ee)} estimate in {label} on {rd_h}; "
+                     f"{name} reported {eps(ea)} against a {eps(ee)} estimate in the {label} on {rd_h}; "
                      f"the figures are on different bases, so no beat or miss is claimed.")}}]},
             separators=(",", ":"))
 
