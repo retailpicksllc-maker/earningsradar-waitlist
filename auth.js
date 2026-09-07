@@ -29,6 +29,18 @@ const _fs = getFirestore(_fbApp);
    On sign-in the local and remote lists MERGE (union) so nothing a visitor starred is lost. */
 let _wl = new Set();
 try { _wl = new Set(JSON.parse(localStorage.getItem("er_watchlist") || "[]")); } catch (e) {}
+// One-time migration: lists saved before ownership tagging existed have no owner and no
+// onboarding record. They were synced from whoever was signed in at the time, so they are
+// stale for a signed-out visitor -- drop them once and stamp the version. A first-time visitor
+// has an empty list here, so nothing of theirs is touched.
+try {
+  if (!localStorage.getItem("er_wl_v")) {
+    if (_wl.size && !localStorage.getItem("er_wl_owner") && !localStorage.getItem("er_onboarded")) {
+      _wl.clear(); localStorage.removeItem("er_watchlist"); localStorage.removeItem("er_myonly");
+    }
+    localStorage.setItem("er_wl_v", "2");
+  }
+} catch (e) {}
 const _wlCbs = [];
 function _wlSave() {
   try { localStorage.setItem("er_watchlist", JSON.stringify([..._wl])); } catch (e) {}
@@ -41,7 +53,7 @@ function _wlSave() {
 let _deleting = false;
 function _forgetLocal() {
   _wl.clear();
-  ["er_watchlist", "er_myonly", "er_onboarded", "er_recent"].forEach((k) => { try { localStorage.removeItem(k); } catch (e) {} });
+  ["er_watchlist", "er_wl_owner", "er_myonly", "er_onboarded", "er_recent"].forEach((k) => { try { localStorage.removeItem(k); } catch (e) {} });
   try { sessionStorage.removeItem("er_auth_prompted"); } catch (e) {}
   _wlSave();
   try { window.dispatchEvent(new CustomEvent("er:signedout")); } catch (e) {}
@@ -71,14 +83,27 @@ window.erWatch = {
 async function _wlSync(user) {
   try {
     const snap = await getDoc(doc(_fs, "users", user.uid));
-    const remote = (snap.exists() && Array.isArray(snap.data().watchlist)) ? snap.data().watchlist : [];
+    const data = snap.exists() ? snap.data() : {};
+    const remote = Array.isArray(data.watchlist) ? data.watchlist : [];
     const localOnly = [..._wl].filter((s) => !remote.includes(s));
     remote.forEach((s) => _wl.add(String(s).toUpperCase()));
     if (localOnly.length)
       await setDoc(doc(_fs, "users", user.uid), { watchlist: arrayUnion(...localOnly) }, { merge: true });
+    // The list on this device now belongs to this account: it is cleared on sign-out, and on a
+    // later visit without a session (see onAuthStateChanged) rather than shown to whoever is next.
+    try { localStorage.setItem("er_wl_owner", user.uid); } catch (e) {}
     _wlSave();
+    // Every account goes through onboarding exactly once, recorded on the account itself so it
+    // follows the person across devices. Existing accounts that never saw it get it on their
+    // next visit; a completed or skipped run is never replayed.
+    if (!data.onboarded && typeof window.erOnboard === "function") window.erOnboard({ account: true });
+    else if (data.onboarded) { try { localStorage.setItem("er_onboarded", "1"); } catch (e) {} }
   } catch (e) { /* offline: local list still works */ }
 }
+window.erMarkOnboarded = (state) => {
+  const u = auth.currentUser; if (!u || _deleting) return;
+  setDoc(doc(_fs, "users", u.uid), { onboarded: state || "done", onboardedAt: serverTimestamp() }, { merge: true }).catch(() => {});
+};
 
 /* Mirror each signed-in user into Firestore /users/{uid} — gives us our own browsable/exportable
    account list (email, name, provider, signup date, last seen). Rules allow each user to write
@@ -605,6 +630,11 @@ onAuthStateChanged(auth, (user) => {
     if (_gated) { _gated = false; const x=q("[data-close]"); if(x) x.style.display=""; if (root.classList.contains("on")) close(); }
   } else {
     _deleting = false;
+    // No session. A watchlist that was synced from an account must not outlive the session on
+    // a shared device (Adam saw "My Stocks (4)" while signed out). A list with no owner tag and
+    // no onboarding record predates both features -- also stale, clear it once.
+    let owner = null; try { owner = localStorage.getItem("er_wl_owner"); } catch (e) {}
+    if (_wl.size && owner) _forgetLocal();
     q('[data-view="form"]').style.display = "block";
     q('[data-view="acct"]').style.display = "none";
     setMode("signin");

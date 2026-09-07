@@ -2545,14 +2545,18 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     host.classList.remove('on'); host.innerHTML='';
     window._erOnboarding=false;
     LS('er_onboarded',completed?'1':'skipped');
+    if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const chip=$id('obChip'); if(chip) chip.style.display=(completed||wl.list().length>=3)?'none':'';
     if(completed&&wl.list().length){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
     erTrack(completed?'onboard_complete':'onboard_exit',{n:wl.list().length,step:steps[step]||'done'});
   }
 
-  function start(){
+  function start(opts){
     if(window._erOnboarding) return;
+    // {account:true}: the signed-in account has never been through this -- run it even if the
+    // device already holds stars (they show pre-selected; Continue is one tap).
+    if(opts&&opts.account){ /* forced */ } else if(LS('er_onboarded')==='1') return;
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
     window._erOnboarding=true; step=0;
     steps=['pick','week']; if(installMode()) steps.push('install');
