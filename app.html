@@ -2601,6 +2601,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     host.classList.remove('on'); host.innerHTML='';
     window._erOnboarding=false;
     LS('er_onboarded',completed?'1':'skipped');
+    if(completed){ try{ sessionStorage.setItem('er_ob_done','1'); }catch(e){} }
     if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const signed=!!(window.erWatch&&erWatch.signedIn());
@@ -2614,8 +2615,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     // Policy (when to show) lives in maybeStart and the account sync; start() always runs.
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
     window._erOnboarding=true; step=0;
-    try{ sessionStorage.setItem('er_ob_seen','1'); }catch(e){}
-    steps=['pick','week']; if(installMode()) steps.push('install');
+    steps=['pick','week']; if(installMode()&&VISITS>=2) steps.push('install');
     host.classList.add('on'); erTrack('onboard_start',{steps:steps.length,mobile:isMobile()?1:0});
     if(!_NAMES) fetch('names.json').then(r=>r.ok?r.json():{}).then(j=>{ _NAMES=j||{}; if(steps[step]==='pick') host.querySelectorAll('.obt small').forEach(el=>{ el.textContent=shortName(el.parentElement.dataset.s); }); }).catch(()=>{});
     render();
@@ -2630,12 +2630,18 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   // so a repeat visit is Continue → their week → Sign in. Signed-in accounts get it once,
   // recorded on the account (see the watchlist sync in auth.js).
   const OB_DELAY_MS=5000;                     // five seconds on the calendar, then the flow takes over
+  // Visits are counted once per browser session; the install step is held back until the
+  // second visit, when the person has come back on their own and the ask makes sense.
+  let VISITS=0;
+  try{ VISITS=+(localStorage.getItem('er_visits')||0); if(sessionStorage.getItem('er_visit_counted')!=='1'){ VISITS+=1; localStorage.setItem('er_visits',String(VISITS)); sessionStorage.setItem('er_visit_counted','1'); } }catch(e){}
   function maybeStart(){
     window._erOnboardDecided=true;
     if(window._erOnboarding) return;
     if(window.erWatch&&erWatch.signedIn()) return;
-    let seenNow=false; try{ seenNow=sessionStorage.getItem('er_ob_seen')==='1'; }catch(e){}
-    if(seenNow) return;
+    // Forced: a refresh brings it straight back. Only finishing it (this session) or signing
+    // in ends it; the next visit starts it again until there is an account.
+    let doneNow=false; try{ doneNow=sessionStorage.getItem('er_ob_done')==='1'; }catch(e){}
+    if(doneNow) return;
     const wait=Math.max(0, OB_DELAY_MS-performance.now());
     setTimeout(()=>{ if(!window._erOnboarding&&!(window.erWatch&&erWatch.signedIn())) start(); }, wait);
   }
