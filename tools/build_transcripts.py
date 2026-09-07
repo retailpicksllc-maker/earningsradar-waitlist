@@ -100,7 +100,9 @@ def build(sym):
     tr = get(f"/v1/transcript/{sym}")
     segs = tr.get("segments") or []
     if not segs:
-        return None, "no transcript segments"
+        # A definitive "none" from the API (not a fetch failure) means the page we may already
+        # have is for an older call -- it must go, not linger under a fresh sitemap date.
+        return None, "STALE" if tr.get("status") == "none" else "no transcript segments"
     quotes = _quotes(segs)
     if len(quotes) < 3:
         return None, f"only {len(quotes)} usable quotes"
@@ -112,7 +114,16 @@ def build(sym):
             and q.get("eps_act") is not None]
     if not past:
         return None, "no reported quarter"
-    q0 = past[0]
+    # The page must describe the quarter the transcript belongs to. The API dates the
+    # transcript by the report it served it for; picking "latest quarter with an actual"
+    # instead labelled Alphabet's June-2026 call "March 2026 quarter" because the July
+    # actual was missing.
+    tr_date = str(tr.get("date") or "")[:10]
+    q0 = next((q for q in quarters if str(q.get("report_date"))[:10] == tr_date), None)
+    if q0 is None:
+        return None, "STALE"
+    if q0.get("eps_act") is None and q0.get("rev_act") is None:
+        return None, f"no actual for {tr_date}"
     name = (PROFILES.get(sym) or {}).get("name") or sym
     # Name the quarter by when it ended: fiscal_year/fiscal_quarter are calendar labels, and
     # "Q3 FY26" on a July-2026 quarter is false for every non-calendar fiscal year (Dell: Q2 FY27).
@@ -269,6 +280,14 @@ if __name__ == "__main__":
         except FetchFailed as e:
             failed.append(s); print(f"  FETCH FAILURE {s}: {e}", flush=True); continue
         if not doc:
+            stale = os.path.join(OUT, "t", s.lower(), "transcript.html")
+            if why == "STALE" and os.path.exists(stale):
+                os.remove(stale)
+                try:
+                    os.rmdir(os.path.dirname(stale))
+                except OSError:
+                    pass
+                print(f"  removed t/{s.lower()}/transcript.html (no transcript for the current report)", flush=True)
             skipped.append((s, why)); print(f"  skip {s} ({why})", flush=True); continue
         d = os.path.join(OUT, "t", s.lower())
         os.makedirs(d, exist_ok=True)
