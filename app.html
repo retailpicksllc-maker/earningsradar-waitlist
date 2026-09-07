@@ -2596,7 +2596,11 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   }
 
   function next(){ step++; if(step>=steps.length){ renderDone(); return; } render(); }
-  function render(){ ({pick:renderPick,week:renderWeek,install:renderInstall})[steps[step]](); }
+  function render(){
+    // Hard rule: a signed-in person is never shown the stock picker, whatever scheduled this.
+    if(steps[step]==='pick'&&window.erWatch&&erWatch.signedIn()){ window.erOnboardClose(); return; }
+    ({pick:renderPick,week:renderWeek,install:renderInstall})[steps[step]]();
+  }
   function finish(completed){
     host.classList.remove('on'); host.innerHTML='';
     window._erOnboarding=false;
@@ -2637,6 +2641,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
       if(!(installMode()&&VISITS>=2)) { window._erOnboarding=false; return; }
       steps=['install'];
     } else {
+      if(window.erWatch&&erWatch.signedIn()){ window._erOnboarding=false; return; }   // visitor flow is for visitors
       steps=['pick','week']; if(installMode()&&VISITS>=2) steps.push('install');
     }
     host.classList.add('on'); erTrack('onboard_start',{steps:steps.length,mobile:isMobile()?1:0});
