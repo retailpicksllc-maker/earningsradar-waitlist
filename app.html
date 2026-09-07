@@ -2399,16 +2399,16 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     toggle(s){ if(window.erWatch) return erWatch.toggle(s); const l=this.list(); const i=l.indexOf(s); if(i>=0) l.splice(i,1); else l.push(s); LS('er_watchlist',JSON.stringify(l)); return i<0; }
   };
 
-  // Companies reporting soon, biggest first — the grid a first-timer sees.
+  // The largest US companies by market cap — the grid a first-timer sees. The calendar data
+  // spans about five months, which covers every large cap's next or last report.
   function candidates(){
-    const today=iso(new Date()); const lim=iso(new Date(Date.now()+21*864e5));
     const seen=new Set(); const out=[];
     // US companies only: a first-timer's grid should not open with WuXi AppTec and Sun Hung Kai.
-    const rows=DATA.filter(r=>r.date>=today&&r.date<=lim&&!/^[A-Z]{4}[FY]$/.test(r.symbol)&&!/[.\-]/.test(r.symbol)&&!(r.row&&r.row.foreign))
+    const rows=DATA.filter(r=>!/^[A-Z]{4}[FY]$/.test(r.symbol)&&!/[.\-]/.test(r.symbol)&&!(r.row&&r.row.foreign))
       .sort((a,b)=>(+String(b.marketCap).replace(/\D/g,'')||0)-(+String(a.marketCap).replace(/\D/g,'')||0));
     const want=(window.innerHeight<760)?12:16;      // short phones: three rows, no scrolling to reach Continue
-    for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=want-4) break; }
-    for(const p of POPULAR){ if(out.length>=want) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }
+    for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=want) break; }
+    for(const p of POPULAR){ if(out.length>=want) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }   // only if the data is thin
     return out;
   }
   function nextReport(s){
