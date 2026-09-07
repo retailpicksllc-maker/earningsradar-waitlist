@@ -537,8 +537,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
   .obt{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--border2);cursor:pointer;user-select:none;transition:transform .12s,border-color .2s,background .2s}
   .obt:active{transform:scale(.94)}
-  .obt .tile{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
-  .obt .tile img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .obt .tile{position:relative;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
+  .obt .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
   .obt b{font-size:12px;letter-spacing:.02em} .obt small{font-size:10.5px;color:var(--muted);line-height:1.1;text-align:center}
   .obt.on{border-color:var(--green);background:rgba(52,211,153,.10)}
   .obt.on::after{content:'✓';position:absolute;top:6px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--green);color:#052;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:obpop .25s}
@@ -556,8 +556,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obghost{background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:12px;padding:11px 16px;font-size:14px;cursor:pointer}
   .obweek{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
   .obrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:13px;background:var(--card);border:1px solid var(--border2)}
-  .obrow .tile{width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
-  .obrow .tile img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .obrow .tile{position:relative;width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
+  .obrow .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
   .obrow .m{flex:1;min-width:0} .obrow .m b{display:block;font-size:14px} .obrow .m span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .obrow .when{text-align:right;flex:none} .obrow .when b{display:block;font-size:13px;color:var(--blueLt)} .obrow .when span{font-size:11.5px;color:var(--muted)}
   .obrow.first{border-color:rgba(47,107,255,.5);background:rgba(47,107,255,.10)}
@@ -2397,7 +2397,8 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   function candidates(){
     const today=iso(new Date()); const lim=iso(new Date(Date.now()+21*864e5));
     const seen=new Set(); const out=[];
-    const rows=DATA.filter(r=>r.date>=today&&r.date<=lim&&!/^[A-Z]{4}F$/.test(r.symbol)&&!/[.\-]/.test(r.symbol))
+    // US companies only: a first-timer's grid should not open with WuXi AppTec and Sun Hung Kai.
+    const rows=DATA.filter(r=>r.date>=today&&r.date<=lim&&!/^[A-Z]{4}[FY]$/.test(r.symbol)&&!/[.\-]/.test(r.symbol)&&!(r.row&&r.row.foreign))
       .sort((a,b)=>(+String(b.marketCap).replace(/\D/g,'')||0)-(+String(a.marketCap).replace(/\D/g,'')||0));
     for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=12) break; }
     for(const p of POPULAR){ if(out.length>=16) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }
@@ -2454,7 +2455,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     const signed=!!(window.erWatch&&erWatch.signedIn());
     const inner=`
       <h2>${first?`${first.sym} reports ${first.days===0?'today':first.days===1?'tomorrow':'in '+first.days+' days'}`:'Your radar is set'}</h2>
-      <p class="sub">${first?'Here is your week. Estimates update live; results land within minutes of the release.':'None of your picks have a date yet — we will add them the moment one is announced.'}</p>
+      <p class="sub">${first?(first.days<=7?'Here is your week.':'Here is what is coming up.')+' Estimates update live; results land within minutes of the release.':'None of your picks have a date yet — we will add them the moment one is announced.'}</p>
       <div class="obweek">${rows}${none.length&&list.length?`<div class="obrow"><div class="m"><span>${none.join(', ')}: no date announced yet</span></div></div>`:''}</div>
       ${signed?`<div class="obbenefit"><span class="ic">📬</span><div><b>Alerts on.</b> You'll get an email the moment each of these reports, with the result vs. estimate.</div></div>`
              :`<div class="obbenefit"><span class="ic">📬</span><div><b>Want the result in your inbox?</b> Sign in (free) and we'll email you the moment each of these reports — and your list syncs to your phone.</div></div>`}
@@ -2522,7 +2523,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   function confetti(){
     const c=document.createElement('canvas'); c.id='obConfetti'; document.body.appendChild(c);
     const ctx=c.getContext('2d'); const dpr=Math.min(2,window.devicePixelRatio||1);
-    c.width=innerWidth*dpr; c.height=innerHeight*dpr; ctx.scale(dpr,dpr);
+    c.width=innerWidth*dpr; c.height=innerHeight*dpr; c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; ctx.scale(dpr,dpr);
     const cols=['#2F6BFF','#6BA5FF','#34D399','#FBBF24','#FF8A3D','#F87171','#fff'];
     const ps=Array.from({length:140},()=>({x:innerWidth/2+(Math.random()-.5)*60,y:innerHeight*.45,vx:(Math.random()-.5)*14,vy:-Math.random()*13-4,g:.35,w:6+Math.random()*6,h:8+Math.random()*8,r:Math.random()*Math.PI,vr:(Math.random()-.5)*.3,c:cols[Math.floor(Math.random()*cols.length)]}));
     const t0=performance.now();
