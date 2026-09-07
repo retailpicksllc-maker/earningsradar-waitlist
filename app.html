@@ -2585,6 +2585,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   // signed-out visitor with no stars of their own gets the picker.
   const chip=$id('obChip'); if(chip) chip.onclick=e=>{ e.preventDefault(); start(); };
   function maybeStart(){
+    window._erOnboardDecided=true;      // the sign-in prompt in auth.js waits for this
     if(window._erOnboarding) return;
     if(window.erWatch&&erWatch.signedIn()) return;
     const state=LS('er_onboarded');
@@ -2596,7 +2597,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     start();
   }
   let _authSeen=false;
-  window.addEventListener('er:auth',e=>{ _authSeen=true; if(e.detail&&e.detail.initial&&!e.detail.user) setTimeout(maybeStart,250); });
+  window.addEventListener('er:auth',e=>{ _authSeen=true; if(e.detail&&e.detail.initial&&!e.detail.user) setTimeout(maybeStart,250); else window._erOnboardDecided=true; });
   setTimeout(()=>{ if(!_authSeen) maybeStart(); },4000);   // auth.js blocked or failed: visitors still get the flow
 })();
 
@@ -2624,7 +2625,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907e">
+<script type="module" src="auth.js?v=20260907f">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,

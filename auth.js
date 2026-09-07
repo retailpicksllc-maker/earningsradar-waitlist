@@ -661,13 +661,19 @@ window.openAuth = (m) => { if (m) setMode(m); open(); };
   const isHome = isCalendar || location.pathname.endsWith("/") || /\/(index|app|app_slim)\.html$/.test(location.pathname);
   if (!isHome) return;
   try { if (sessionStorage.getItem("er_auth_prompted")) return; } catch (e) {}
-  setTimeout(() => {
+  // The onboarding flow comes first, always. Until app.html has decided whether to run it
+  // (it waits for the session answer, which can take longer than 5s on a slow connection)
+  // and, if it runs, until it is closed, this prompt waits. Onboarding offers sign-in itself
+  // and marks the session as prompted when it finishes, so nobody gets both.
+  const tryOpen = () => {
+    try { if (sessionStorage.getItem("er_auth_prompted")) return; } catch (e) {}
     if (root.classList.contains("on")) return;   // already open
     if (auth.currentUser) return;                 // already signed in
-    if (window._erOnboarding) return;             // onboarding owns the sign-in moment (its "your week" step offers it)
+    if (!window._erOnboardDecided || window._erOnboarding) { setTimeout(tryOpen, 1000); return; }
     try { sessionStorage.setItem("er_auth_prompted", "1"); } catch (e) {}
     _gated = true;                                // MANDATORY: can't be dismissed until signed in
     setMode("signin");
     open();
-  }, 5000);
+  };
+  setTimeout(tryOpen, 5000);
 })();
