@@ -2383,8 +2383,10 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }catch(e){ return false; } };
   const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
   const isMobile=()=>isIOS() || /Android/i.test(navigator.userAgent);
-  const POPULAR=['NVDA','AAPL','TSLA','MSFT','AMZN','GOOGL','META','AMD','NFLX','AVGO','PLTR','COST','JPM','ORCL','ADBE','CRM','WMT','DIS','UBER','COIN'];
-  const FALLBACK={NVDA:'NVIDIA',AAPL:'Apple',TSLA:'Tesla',MSFT:'Microsoft',AMZN:'Amazon',GOOGL:'Alphabet',META:'Meta',AMD:'AMD',NFLX:'Netflix',AVGO:'Broadcom',PLTR:'Palantir',COST:'Costco',JPM:'JPMorgan',ORCL:'Oracle',ADBE:'Adobe',CRM:'Salesforce',WMT:'Walmart',DIS:'Disney',UBER:'Uber',COIN:'Coinbase'};
+  // The names retail investors actually follow, in the order they'd list them. Fixed on purpose:
+  // a cap ranking put SpaceX, Eli Lilly, Visa and Exxon ahead of AMD and Palantir.
+  const POPULAR=['NVDA','TSLA','AAPL','MSFT','AMZN','GOOGL','META','AMD','PLTR','NFLX','AVGO','COIN','HOOD','SOFI','MU','JPM'];
+  const FALLBACK={NVDA:'NVIDIA',TSLA:'Tesla',AAPL:'Apple',MSFT:'Microsoft',AMZN:'Amazon',GOOGL:'Alphabet',META:'Meta',AMD:'AMD',PLTR:'Palantir',NFLX:'Netflix',AVGO:'Broadcom',COIN:'Coinbase',HOOD:'Robinhood',SOFI:'SoFi',MU:'Micron',JPM:'JPMorgan'};
   let _NAMES=null;
   const nameOf=s=>(_NAMES&&_NAMES[s])||(META[s]&&META[s].name&&META[s].name!==s?META[s].name:null)||FALLBACK[s]||s;
   const shortName=s=>{ let n=nameOf(s); if(!n) return s; n=n.replace(/,?\s+(Inc|Corp|Corporation|Company|Co|Ltd|plc|Holdings|Group|Technologies|Limited|Incorporated|N\.V\.|S\.A\.)\.?(\s|$).*/i,'').trim(); return n.length>16?n.slice(0,15)+'…':n; };
@@ -2399,17 +2401,10 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     toggle(s){ if(window.erWatch) return erWatch.toggle(s); const l=this.list(); const i=l.indexOf(s); if(i>=0) l.splice(i,1); else l.push(s); LS('er_watchlist',JSON.stringify(l)); return i<0; }
   };
 
-  // The largest US companies by market cap — the grid a first-timer sees. The calendar data
-  // spans about five months, which covers every large cap's next or last report.
+  // The grid a first-timer sees: the popular names above, in that order.
   function candidates(){
-    const seen=new Set(); const out=[];
-    // US companies only: a first-timer's grid should not open with WuXi AppTec and Sun Hung Kai.
-    const rows=DATA.filter(r=>!/^[A-Z]{4}[FY]$/.test(r.symbol)&&!/[.\-]/.test(r.symbol)&&!(r.row&&r.row.foreign))
-      .sort((a,b)=>(+String(b.marketCap).replace(/\D/g,'')||0)-(+String(a.marketCap).replace(/\D/g,'')||0));
     const want=(window.innerHeight<760)?12:16;      // short phones: three rows, no scrolling to reach Continue
-    for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=want) break; }
-    for(const p of POPULAR){ if(out.length>=want) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }   // only if the data is thin
-    return out;
+    return POPULAR.slice(0,want);
   }
   function nextReport(s){
     const today=iso(new Date());
