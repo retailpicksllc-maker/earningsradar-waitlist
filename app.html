@@ -2555,7 +2555,6 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     host.classList.remove('on'); host.innerHTML='';
     window._erOnboarding=false;
     LS('er_onboarded',completed?'1':'skipped');
-    if(!completed){ try{ sessionStorage.setItem('er_ob_skipped','1'); }catch(e){} }
     if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const chip=$id('obChip'); if(chip) chip.style.display=(completed||wl.list().length>=3)?'none':'';
@@ -2572,6 +2571,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     if(opts&&opts.account){ /* forced */ } else if(LS('er_onboarded')==='1') return;
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
     window._erOnboarding=true; step=0;
+    try{ sessionStorage.setItem('er_ob_seen','1'); }catch(e){}
     steps=['pick','week']; if(installMode()) steps.push('install');
     host.classList.add('on'); erTrack('onboard_start',{steps:steps.length,mobile:isMobile()?1:0});
     if(!_NAMES) fetch('names.json').then(r=>r.ok?r.json():{}).then(j=>{ _NAMES=j||{}; if(steps[step]==='pick') host.querySelectorAll('.obt small').forEach(el=>{ el.textContent=shortName(el.parentElement.dataset.s); }); }).catch(()=>{});
@@ -2583,16 +2583,17 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   // session. Signed-in accounts are handled by the watchlist sync (once per account); a
   // signed-out visitor with no stars of their own gets the picker.
   const chip=$id('obChip'); if(chip) chip.onclick=e=>{ e.preventDefault(); start(); };
+  // Signed out, the flow shows once per visit until the person signs in -- it replaced the
+  // timed sign-in popup, and that was its cadence. Picks they already made come pre-selected,
+  // so a repeat visit is Continue → their week → Sign in. Signed-in accounts get it once,
+  // recorded on the account (see the watchlist sync in auth.js).
   function maybeStart(){
-    window._erOnboardDecided=true;      // the sign-in prompt in auth.js waits for this
+    window._erOnboardDecided=true;
     if(window._erOnboarding) return;
     if(window.erWatch&&erWatch.signedIn()) return;
-    const state=LS('er_onboarded');
-    if(state==='1') return;
-    if(wl.list().length>=3){ LS('er_onboarded','1'); return; }
     if(chip) chip.style.display='';
-    let skippedNow=false; try{ skippedNow=sessionStorage.getItem('er_ob_skipped')==='1'; }catch(e){}
-    if(state==='skipped'&&skippedNow) return;      // skipped this session: leave them alone until next visit
+    let seenNow=false; try{ seenNow=sessionStorage.getItem('er_ob_seen')==='1'; }catch(e){}
+    if(seenNow) return;
     if(/^#(day-|[A-Za-z]{1,6}$)/.test(location.hash)&&!/^#(earnings|mystocks|news|week|month)$/i.test(location.hash)) return;   // deep-linked to a ticker: don't cover it
     start();
   }
