@@ -29,18 +29,6 @@ const _fs = getFirestore(_fbApp);
    On sign-in the local and remote lists MERGE (union) so nothing a visitor starred is lost. */
 let _wl = new Set();
 try { _wl = new Set(JSON.parse(localStorage.getItem("er_watchlist") || "[]")); } catch (e) {}
-// One-time migration: lists saved before ownership tagging existed have no owner and no
-// onboarding record. They were synced from whoever was signed in at the time, so they are
-// stale for a signed-out visitor -- drop them once and stamp the version. A first-time visitor
-// has an empty list here, so nothing of theirs is touched.
-try {
-  if (!localStorage.getItem("er_wl_v")) {
-    if (_wl.size && !localStorage.getItem("er_wl_owner") && !localStorage.getItem("er_onboarded")) {
-      _wl.clear(); localStorage.removeItem("er_watchlist"); localStorage.removeItem("er_myonly");
-    }
-    localStorage.setItem("er_wl_v", "2");
-  }
-} catch (e) {}
 const _wlCbs = [];
 function _wlSave() {
   try { localStorage.setItem("er_watchlist", JSON.stringify([..._wl])); } catch (e) {}
@@ -58,6 +46,16 @@ function _forgetLocal() {
   _wlSave();
   try { window.dispatchEvent(new CustomEvent("er:signedout")); } catch (e) {}
 }
+// One-time migration: lists saved before ownership tagging existed have no owner and no
+// onboarding record. They were synced from whoever was signed in at the time, so they are
+// stale for a signed-out visitor -- drop them once and stamp the version. A first-time visitor
+// has an empty list here, so nothing of theirs is touched.
+try {
+  if (!localStorage.getItem("er_wl_v")) {
+    localStorage.setItem("er_wl_v", "2");
+    if (_wl.size && !localStorage.getItem("er_wl_owner") && !localStorage.getItem("er_onboarded")) _forgetLocal();
+  }
+} catch (e) {}
 window.erWatch = {
   list: () => [..._wl],
   has: (s) => _wl.has(String(s || "").toUpperCase()),
