@@ -563,6 +563,9 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obrow.first{border-color:rgba(47,107,255,.5);background:rgba(47,107,255,.10)}
   .obbenefit{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;border-radius:13px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);margin-bottom:12px;font-size:13.5px}
   .obbenefit .ic{font-size:20px;line-height:1}
+  .obtabs{display:flex;gap:6px;justify-content:center;margin:2px 0 12px;flex-wrap:wrap}
+  .obtab{background:var(--card);border:1px solid var(--border2);color:var(--muted);border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}
+  .obtab.on{border-color:var(--blue);color:var(--text);background:rgba(47,107,255,.15)}
   .obios{display:flex;flex-direction:column;gap:10px;margin:6px 0 14px}
   .obstep{display:flex;gap:12px;align-items:center;padding:12px 13px;border-radius:13px;background:var(--card);border:1px solid var(--border2);font-size:14px}
   .obstep .n{width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
@@ -2488,33 +2491,77 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     const l=$id('obLater'); if(l) l.onclick=()=>{ erTrack('onboard_signin_later'); next(); };
   }
 
-  // Step 3 — install
-  function installMode(){
-    if(isStandalone()||LS('er_installed')==='1') return null;
-    if(window._erInstallPrompt) return 'prompt';
-    if(isIOS()) return 'ios';
-    return null;                      // desktop without a prompt: nothing honest to offer
+  // Step 3 — install. Every platform gets exact, illustrated steps for the browser it is on,
+  // with tabs to switch device (someone reading on a laptop may want the phone steps). Where
+  // the browser offers a real install prompt (Chrome/Edge on Android, Mac, Windows) the button
+  // triggers it; everywhere else the steps ARE the install.
+  const _ua=navigator.userAgent;
+  const _isAndroid=/Android/i.test(_ua), _isMac=/Macintosh/.test(_ua)&&!isIOS(), _isWin=/Windows/.test(_ua);
+  const _isEdge=/Edg\//.test(_ua)||/EdgiOS|EdgA/.test(_ua), _isFirefox=/Firefox|FxiOS/.test(_ua), _isSamsung=/SamsungBrowser/.test(_ua);
+  const _isChrome=(/Chrome\//.test(_ua)||/CriOS/.test(_ua))&&!_isEdge&&!_isSamsung, _isSafari=/Safari\//.test(_ua)&&!_isChrome&&!_isEdge&&!_isFirefox&&!_isSamsung;
+  const I={
+    share:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`,
+    plus:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>`,
+    dots:`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>`,
+    dotsH:`<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`,
+    menu:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+    installBar:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 8v5M9.5 10.5L12 13l2.5-2.5M8 20h8"/></svg>`,
+    dock:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M6 20h12"/><path d="M12 8v5M9.5 10.5L12 13l2.5-2.5"/></svg>`,
+    file:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`,
+    check:`<span style="font-size:20px">✅</span>`,
+    safari:`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>`,
+    star:`<span style="font-size:18px">⭐</span>`
+  };
+  const stepRow=(n,ic,txt)=>`<div class="obstep"><span class="n">${n}</span>${ic}<span>${txt}</span></div>`;
+  // Guides keyed by device tab; each picks the browser variant.
+  function guide(dev){
+    if(dev==='iphone'){
+      if(_isChrome&&isIOS()) return {title:'Add to your iPhone home screen',sub:'Chrome on iPhone',steps:[[I.share,'Tap the <b>Share</b> icon at the top right of Chrome'],[I.plus,'Tap <b>Add to Home Screen</b>'],[I.check,'Tap <b>Add</b> — Earnings Radar opens full-screen from your home screen']]};
+      if(isIOS()&&!_isSafari) return {title:'Add to your iPhone home screen',sub:'Open this page in Safari first',steps:[[I.safari,'Copy this link and open it in <b>Safari</b> (Apple only allows installs from Safari)'],[I.share,'Tap the <b>Share</b> button at the bottom of Safari'],[I.plus,'Tap <b>Add to Home Screen</b>, then <b>Add</b>']]};
+      return {title:'Add to your iPhone home screen',sub:'Safari · about 10 seconds',steps:[[I.share,'Tap the <b>Share</b> button at the bottom of Safari (the square with an arrow)'],[I.plus,'Scroll down and tap <b>Add to Home Screen</b>'],[I.check,'Tap <b>Add</b> — it opens full-screen like an app, no App Store needed']]};
+    }
+    if(dev==='android'){
+      if(_isSamsung) return {title:'Add to your Android home screen',sub:'Samsung Internet',steps:[[I.menu,'Tap the <b>menu</b> (three lines) at the bottom right'],[I.plus,'Tap <b>Add page to</b> → <b>Home screen</b>'],[I.check,'Tap <b>Add</b>']]};
+      if(_isFirefox&&_isAndroid) return {title:'Add to your Android home screen',sub:'Firefox',steps:[[I.dots,'Tap the <b>⋮</b> menu at the top right'],[I.plus,'Tap <b>Add to Home screen</b>'],[I.check,'Tap <b>Add</b>']]};
+      return {title:'Install on your Android phone',sub:'Chrome · one tap',prompt:true,steps:[[I.dots,'If the Install button below does nothing: tap the <b>⋮</b> menu at the top right of Chrome'],[I.installBar,'Tap <b>Add to Home screen</b> (or <b>Install app</b>)'],[I.check,'Tap <b>Install</b> — it appears with your other apps']]};
+    }
+    if(dev==='mac'){
+      if(_isSafari&&_isMac) return {title:'Add Earnings Radar to your Mac Dock',sub:'Safari (macOS Sonoma or newer)',steps:[[I.file,'Click <b>File</b> in the menu bar at the top of the screen (or the Share button in Safari\'s toolbar)'],[I.dock,'Click <b>Add to Dock…</b>'],[I.check,'Click <b>Add</b> — it sits in your Dock and opens in its own window, like any Mac app']]};
+      if(_isEdge) return {title:'Install Earnings Radar on your Mac',sub:'Microsoft Edge',prompt:true,steps:[[I.dotsH,'Click the <b>⋯</b> menu at the top right of Edge'],[I.installBar,'Click <b>Apps</b> → <b>Install this site as an app</b>'],[I.check,'Click <b>Install</b> — it goes in your Dock and Applications']]};
+      if(_isFirefox) return {title:'Keep Earnings Radar one click away',sub:'Firefox can\'t install web apps',steps:[[I.star,'Press <b>⌘ D</b> to bookmark it, or drag the address-bar icon to your Dock'],[I.safari,'To get a real app in your Dock, open earningsradar.org in <b>Safari</b> and use File → Add to Dock'],[I.check,'Either way, your watchlist and alerts are the same']]};
+      return {title:'Install Earnings Radar on your Mac',sub:'Chrome · adds it to your Dock and Applications',prompt:true,steps:[[I.installBar,'Click the <b>install icon</b> at the right end of the address bar (a screen with a down arrow), or the Install button below'],[I.dots,'No icon? Click <b>⋮</b> → <b>Cast, save, and share</b> → <b>Install page as app…</b>'],[I.check,'Click <b>Install</b> — it opens in its own window from your Dock']]};
+    }
+    // windows / other desktop
+    if(_isEdge) return {title:'Install Earnings Radar on Windows',sub:'Microsoft Edge',prompt:true,steps:[[I.installBar,'Click the <b>install icon</b> at the right end of the address bar, or the Install button below'],[I.dotsH,'No icon? Click <b>⋯</b> → <b>Apps</b> → <b>Install this site as an app</b>'],[I.check,'Click <b>Install</b> — it lands in your Start menu and taskbar']]};
+    if(_isFirefox) return {title:'Keep Earnings Radar one click away',sub:'Firefox can\'t install web apps',steps:[[I.star,'Press <b>Ctrl D</b> to bookmark it, or pin the tab'],[I.installBar,'To get a real app, open earningsradar.org in <b>Chrome</b> or <b>Edge</b> and click Install'],[I.check,'Either way, your watchlist and alerts are the same']]};
+    return {title:'Install Earnings Radar on Windows',sub:'Chrome · adds it to your Start menu',prompt:true,steps:[[I.installBar,'Click the <b>install icon</b> at the right end of the address bar (a screen with a down arrow), or the Install button below'],[I.dots,'No icon? Click <b>⋮</b> → <b>Cast, save, and share</b> → <b>Install page as app…</b>'],[I.check,'Click <b>Install</b> — it opens in its own window and pins to the taskbar']]};
   }
-  function renderInstall(){
-    const mode=installMode();
-    const share=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`;
-    const plus=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>`;
+  const deviceNow=()=>isIOS()?'iphone':_isAndroid?'android':_isMac?'mac':'windows';
+  function installMode(){
+    if(isStandalone()||LS('er_installed')==='1') return null;   // already on the home screen / Dock
+    return 'guide';
+  }
+  function renderInstall(dev){
+    dev=dev||deviceNow();
+    const g=guide(dev);
+    const canPrompt=!!(g.prompt&&window._erInstallPrompt&&dev===deviceNow());
+    const tabs=[['iphone','iPhone'],['android','Android'],['mac','Mac'],['windows','Windows']]
+      .map(([k,l])=>`<button class="obtab${k===dev?' on':''}" data-dev="${k}">${l}</button>`).join('');
     const inner=`
       <img class="obicon" src="/icon-192.png" alt="">
-      <h2 style="text-align:center">Put Earnings Radar on your home screen</h2>
-      <p class="sub" style="text-align:center">Opens full-screen like an app, one tap from your watchlist. No app store, nothing to update.</p>
-      ${mode==='ios'?`<div class="obios">
-          <div class="obstep"><span class="n">1</span>${share}<span>Tap the <b>Share</b> button at the bottom of Safari</span></div>
-          <div class="obstep"><span class="n">2</span>${plus}<span>Scroll down and tap <b>Add to Home Screen</b></span></div>
-          <div class="obstep"><span class="n">3</span><span style="font-size:20px">✅</span><span>Tap <b>Add</b> — done</span></div></div>`:''}
-      <div class="obfoot"><button class="obghost" id="obLater">Maybe later</button><button class="obnext" id="obNext">${mode==='prompt'?'Install':'I added it'}</button></div>`;
+      <h2 style="text-align:center">${g.title}</h2>
+      <p class="sub" style="text-align:center">${esc(g.sub)} — opens like an app, one tap from your watchlist. Nothing to download or update.</p>
+      <div class="obtabs">${tabs}</div>
+      <div class="obios">${g.steps.map((s,i)=>stepRow(i+1,s[0],s[1])).join('')}</div>
+      <div class="obfoot"><button class="obghost" id="obLater">Maybe later</button><button class="obnext" id="obNext">${canPrompt?'Install':'I added it'}</button></div>`;
     frame(inner);
-    $id('obLater').onclick=()=>{ erTrack('onboard_install_later'); next(); };
+    host.querySelectorAll('.obtab').forEach(b=>{ b.onclick=()=>{ erTrack('onboard_install_tab',{dev:b.dataset.dev}); renderInstall(b.dataset.dev); }; });
+    $id('obLater').onclick=()=>{ erTrack('onboard_install_later',{dev}); next(); };
     $id('obNext').onclick=async()=>{
-      if(mode==='prompt'){
+      if(canPrompt){
         const ev=window._erInstallPrompt; window._erInstallPrompt=null;
-        try{ ev.prompt(); const c=await ev.userChoice; erTrack('onboard_install_prompt',{outcome:c&&c.outcome}); if(c&&c.outcome==='accepted') LS('er_installed','1'); }catch(e){}
-      } else erTrack('onboard_install_ios_done');
+        try{ ev.prompt(); const c=await ev.userChoice; erTrack('onboard_install_prompt',{outcome:c&&c.outcome,dev}); if(c&&c.outcome==='accepted') LS('er_installed','1'); }catch(e){}
+      } else erTrack('onboard_install_manual_done',{dev});
       next();
     };
   }
