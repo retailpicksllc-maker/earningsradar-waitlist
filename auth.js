@@ -46,16 +46,6 @@ function _forgetLocal() {
   _wlSave();
   try { window.dispatchEvent(new CustomEvent("er:signedout")); } catch (e) {}
 }
-// One-time migration: lists saved before ownership tagging existed have no owner and no
-// onboarding record. They were synced from whoever was signed in at the time, so they are
-// stale for a signed-out visitor -- drop them once and stamp the version. A first-time visitor
-// has an empty list here, so nothing of theirs is touched.
-try {
-  if (!localStorage.getItem("er_wl_v")) {
-    localStorage.setItem("er_wl_v", "2");
-    if (_wl.size && !localStorage.getItem("er_wl_owner") && !localStorage.getItem("er_onboarded")) _forgetLocal();
-  }
-} catch (e) {}
 window.erWatch = {
   list: () => [..._wl],
   has: (s) => _wl.has(String(s || "").toUpperCase()),
@@ -66,6 +56,9 @@ window.erWatch = {
     const on = !_wl.has(s); if (on) _wl.add(s); else _wl.delete(s);
     _wlSave();
     const u = auth.currentUser;
+    // Who this list belongs to: the signed-in account (set by the sync) or "anon" for a visitor
+    // who has never signed in here. Anything else found without a session is someone else's.
+    if (!u) { try { if (localStorage.getItem("er_wl_owner") !== "anon") localStorage.setItem("er_wl_owner", "anon"); } catch (e) {} }
     if (u && !_deleting) setDoc(doc(_fs, "users", u.uid),
       { watchlist: on ? arrayUnion(s) : arrayRemove(s) }, { merge: true }).catch((e) => {
         // A swallowed failure here is invisible everywhere: the star lights up from
@@ -632,7 +625,7 @@ onAuthStateChanged(auth, (user) => {
     // a shared device (Adam saw "My Stocks (4)" while signed out). A list with no owner tag and
     // no onboarding record predates both features -- also stale, clear it once.
     let owner = null; try { owner = localStorage.getItem("er_wl_owner"); } catch (e) {}
-    if (_wl.size && owner) _forgetLocal();
+    if (_wl.size && owner !== "anon") _forgetLocal();
     q('[data-view="form"]').style.display = "block";
     q('[data-view="acct"]').style.display = "none";
     setMode("signin");
