@@ -2602,7 +2602,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     window._erOnboarding=false;
     LS('er_onboarded',completed?'1':'skipped');
     if(completed){ try{ sessionStorage.setItem('er_ob_done','1'); }catch(e){} }
-    if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
+    if(completed&&window.erMarkOnboarded) erMarkOnboarded('done');   // on the account (if any), so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const signed=!!(window.erWatch&&erWatch.signedIn());
     if(completed&&wl.list().length&&signed){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
@@ -2613,7 +2613,12 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   function start(opts){
     try{ (window._obTrail=window._obTrail||[]).push(['start', !!(opts&&opts.account), !!(window.erWatch&&erWatch.signedIn()), Math.round(performance.now())]); }catch(e){}
     if(window._erOnboarding) return;
-    // Policy (when to show) lives in maybeStart and the account sync; start() always runs.
+    // An account request arriving while the visitor flow is running or just finished (the
+    // person signed up from step 2) must not start it over: that run counts for the account.
+    if(opts&&opts.account){
+      let doneNow=false; try{ doneNow=sessionStorage.getItem('er_ob_done')==='1'; }catch(e){}
+      if(doneNow){ if(window.erMarkOnboarded) erMarkOnboarded('done'); return; }
+    }
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
     window._erOnboarding=true; window._erOnboardingAccount=!!(opts&&opts.account); step=0;
     steps=['pick','week']; if(installMode()&&VISITS>=2) steps.push('install');
@@ -2679,7 +2684,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907l">
+<script type="module" src="auth.js?v=20260907m">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,

@@ -94,8 +94,12 @@ async function _wlSync(user) {
     let doneHere = false; try { doneHere = localStorage.getItem("er_ob_done_" + user.uid) === "1"; } catch (e) {}
     try { (window._obTrail = window._obTrail || []).push(["sync", data.onboarded || null, doneHere, Math.round(performance.now())]); } catch (e) {}
     if (!data.onboarded && doneHere) { window.erMarkOnboarded("done"); }
-    else if (!data.onboarded && typeof window.erOnboard === "function")
-      setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
+    else if (!data.onboarded && typeof window.erOnboard === "function") {
+      // Fire only if the visitor flow is not already running / just finished (signing up from
+      // its step 2 is the normal path) -- start() checks that too, this just avoids the timer.
+      if (!window._erOnboarding)
+        setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
+    }
     else if (data.onboarded) {
       try { localStorage.setItem("er_onboarded", "1"); } catch (e) {}
       if (window._erOnboarding && !window._erOnboardingAccount && window.erOnboardClose) window.erOnboardClose();
