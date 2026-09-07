@@ -1075,9 +1075,11 @@ async function loadLiveCalendar(){
       // A popup opened from a #TICKER deep link renders before this first fetch lands, so it
       // showed 'reports soon' with dashes while the recap below had the real numbers.
       // Re-open it once, silently, now that the event rows exist.
+      // (The detail lives in the rail on wide screens, so 'is the overlay on' is the wrong
+      // question -- it never was, and a shared #BABA link kept showing the baked $1.50
+      // estimate and no actual while the live rows sat right underneath.)
       try{
-        const _ov=document.getElementById('overlay');
-        if(_ov&&_ov.classList.contains('on')&&window._detSym&&!window._detHydrated){
+        if(window._detOpen&&window._detSym&&!window._detHydrated){
           const _s=window._detSym, _hit=DATA.find(r=>r.symbol===_s);
           if(_hit){ window._detHydrated=true; window._fromPop=true;
             try{ openDetail(_hit.symbol,_hit.date); } finally { window._fromPop=false; } }
@@ -1591,7 +1593,7 @@ function _hideDetailInRail(){
 }
 
 function openDetail(sym,date){
-  window._detSym=sym; if(!window._fromPop) window._detHydrated=false;
+  window._detSym=sym; window._detOpen=true; if(!window._fromPop) window._detHydrated=false;
   if(!window._fromPop){ try{ history.pushState({v:'det',sym:sym,date:date,day:dayView},'','#'+sym); }catch(e){} }
   erTrack('ticker_click',{ticker:sym});
   _recAdd(sym);
@@ -1909,7 +1911,7 @@ function loadInsight(sym,rep){
   _INSP=_INSP||fetch('insights.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
   _INSP.then(j=>{_INS=j||{};paint();});
 }
-function _closeDetailNow(){clearInterval(window._detTimer);if(window._callTimer){clearInterval(window._callTimer);window._callTimer=null;}$('#overlay').classList.remove('on');_hideDetailInRail();}
+function _closeDetailNow(){window._detOpen=false;clearInterval(window._detTimer);if(window._callTimer){clearInterval(window._callTimer);window._callTimer=null;}$('#overlay').classList.remove('on');_hideDetailInRail();}
 function closeDetail(){ if(history.state&&history.state.v==='det'){ history.back(); } else { _closeDetailNow(); } }
 function _pushDay(d){ if(!window._fromPop){ try{ history.pushState({v:'day',d:d},'','#day-'+d); }catch(e){} } }
 $('#overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeDetail();});
