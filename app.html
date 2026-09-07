@@ -596,7 +596,6 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
     <a href="#" data-page="news">News</a>
   </div>
   <div class="links navright">
-    <a href="#" id="obChip" class="obchip" style="display:none" title="Pick your stocks and set up alerts">★ Set up my radar</a>
     <a href="#" id="authTrigger" class="cta">Sign in</a>
   </div>
 </div></nav>
@@ -2432,8 +2431,8 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   let step=0, steps=[], host=null;
   function progress(){ return `<div class="obprog">${steps.map((_,i)=>`<i class="${i<step?'done':i===step?'now':''}"></i>`).join('')}</div>`; }
   function frame(inner,{skip=true}={}){
-    host.innerHTML=`<div class="obcard"><div class="obtop">${progress()}${skip?'<button class="obskip" data-skip>Skip</button>':'<span></span>'}</div>${inner}</div>`;
-    const sk=host.querySelector('[data-skip]'); if(sk) sk.onclick=()=>{ erTrack('onboard_skip',{step:steps[step]}); finish(false); };
+    // No Skip and no backdrop dismiss: like the sign-in prompt it replaced, this runs to the end.
+    host.innerHTML=`<div class="obcard"><div class="obtop">${progress()}<span></span></div>${inner}</div>`;
     host.querySelector('.obcard').scrollTop=0;
   }
 
@@ -2557,7 +2556,6 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     LS('er_onboarded',completed?'1':'skipped');
     if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
-    const chip=$id('obChip'); if(chip) chip.style.display=(completed||wl.list().length>=3)?'none':'';
     const signed=!!(window.erWatch&&erWatch.signedIn());
     if(completed&&wl.list().length&&signed){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
     else if(completed&&wl.list().length){ toast('Sign in any time to save these stocks and get alerts'); }
@@ -2580,20 +2578,19 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   // Auto-start for first-time visitors -- but only once auth.js has settled whether there is a
   // session. Signed-in accounts are handled by the watchlist sync (once per account); a
   // signed-out visitor with no stars of their own gets the picker.
-  const chip=$id('obChip'); if(chip) chip.onclick=e=>{ e.preventDefault(); start(); };
   // Signed out, the flow shows once per visit until the person signs in -- it replaced the
   // timed sign-in popup, and that was its cadence. Picks they already made come pre-selected,
   // so a repeat visit is Continue → their week → Sign in. Signed-in accounts get it once,
   // recorded on the account (see the watchlist sync in auth.js).
+  const OB_DELAY_MS=5000;                     // five seconds on the calendar, then the flow takes over
   function maybeStart(){
     window._erOnboardDecided=true;
     if(window._erOnboarding) return;
     if(window.erWatch&&erWatch.signedIn()) return;
-    if(chip) chip.style.display='';
     let seenNow=false; try{ seenNow=sessionStorage.getItem('er_ob_seen')==='1'; }catch(e){}
     if(seenNow) return;
-    if(/^#(day-|[A-Za-z]{1,6}$)/.test(location.hash)&&!/^#(earnings|mystocks|news|week|month)$/i.test(location.hash)) return;   // deep-linked to a ticker: don't cover it
-    start();
+    const wait=Math.max(0, OB_DELAY_MS-performance.now());
+    setTimeout(()=>{ if(!window._erOnboarding&&!(window.erWatch&&erWatch.signedIn())) start(); }, wait);
   }
   let _authSeen=false;
   window.addEventListener('er:auth',e=>{ _authSeen=true; if(e.detail&&e.detail.initial&&!e.detail.user) setTimeout(maybeStart,250); else window._erOnboardDecided=true; });
@@ -2624,7 +2621,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907g">
+<script type="module" src="auth.js?v=20260907h">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,

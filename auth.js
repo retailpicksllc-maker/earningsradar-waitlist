@@ -87,7 +87,8 @@ async function _wlSync(user) {
     // Every account goes through onboarding exactly once, recorded on the account itself so it
     // follows the person across devices. Existing accounts that never saw it get it on their
     // next visit; a completed or skipped run is never replayed.
-    if (!data.onboarded && typeof window.erOnboard === "function") window.erOnboard({ account: true });
+    if (!data.onboarded && typeof window.erOnboard === "function")
+      setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
     else if (data.onboarded) { try { localStorage.setItem("er_onboarded", "1"); } catch (e) {} }
   } catch (e) { /* offline: local list still works */ }
 }
