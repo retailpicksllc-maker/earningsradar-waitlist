@@ -8,7 +8,7 @@ import {
   sendEmailVerification, EmailAuthProvider, reauthenticateWithCredential,
   reauthenticateWithPopup, deleteUser
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, serverTimestamp, increment, arrayUnion, arrayRemove }
+import { getFirestore, doc, getDoc, getDocFromServer, setDoc, deleteDoc, serverTimestamp, increment, arrayUnion, arrayRemove }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Same Firebase project as the iOS app.
@@ -73,7 +73,9 @@ window.erWatch = {
 };
 async function _wlSync(user) {
   try {
-    const snap = await getDoc(doc(_fs, "users", user.uid));
+    let snap;
+    try { snap = await getDocFromServer(doc(_fs, "users", user.uid)); }
+    catch (e) { snap = await getDoc(doc(_fs, "users", user.uid)); }     // offline: whatever we have
     const data = snap.exists() ? snap.data() : {};
     const remote = Array.isArray(data.watchlist) ? data.watchlist : [];
     const localOnly = [..._wl].filter((s) => !remote.includes(s));
@@ -109,7 +111,7 @@ window.erMarkOnboarded = (state) => {
 // Read-only view of the signed-in account's record, for checking what the server actually holds.
 window.erAccountDoc = async () => {
   const u = auth.currentUser; if (!u) return null;
-  try { const snap = await getDoc(doc(_fs, "users", u.uid)); return snap.exists() ? snap.data() : {}; }
+  try { const snap = await getDocFromServer(doc(_fs, "users", u.uid)); return snap.exists() ? snap.data() : {}; }
   catch (e) { return { error: (e && e.code) || String(e) }; }
 };
 
@@ -616,8 +618,10 @@ onAuthStateChanged(auth, (user) => {
   // Hide "Create account" / sign-in CTAs across the page when signed in.
   document.querySelectorAll("[data-auth-open]").forEach((el) => { el.style.display = user ? "none" : ""; });
   if (user) {
-    _mirrorUser(user);
-    _wlSync(user);
+    // Read the record BEFORE the mirror write touches it. With that write pending, getDoc handed
+    // back a view of the document built from the pending patch alone -- no `onboarded`, no
+    // watchlist -- and the account looked brand new on every load. Server read, then mirror.
+    _wlSync(user).finally(() => _mirrorUser(user));
     const nm = user.displayName || user.email.split("@")[0];
     q('[data-view="form"]').style.display = "none";
     q('[data-view="acct"]').style.display = "block";
