@@ -46,8 +46,6 @@ if('serviceWorker' in navigator) window.addEventListener('load',()=>{ navigator.
 <meta name="twitter:title" content="Earnings Radar — free earnings calendar, estimates &amp; results">
 <meta name="twitter:description" content="Every earnings report, every week. EPS and revenue estimates against actuals, five years of history per ticker. Free.">
 <meta name="twitter:image" content="https://earningsradar.org/og-image.png">
-<!-- Re-arm the 5s sign-in popup on every visit (clears auth.js's once-per-session guard). -->
-<script>try{sessionStorage.removeItem("er_auth_prompted");}catch(e){}</script>
 <!-- Google Analytics 4 (Consent Mode v2: default denied until the visitor accepts the banner). -->
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
@@ -2557,6 +2555,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     host.classList.remove('on'); host.innerHTML='';
     window._erOnboarding=false;
     LS('er_onboarded',completed?'1':'skipped');
+    if(!completed){ try{ sessionStorage.setItem('er_ob_skipped','1'); }catch(e){} }
     if(window.erMarkOnboarded) erMarkOnboarded(completed?'done':'skipped');   // on the account, so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const chip=$id('obChip'); if(chip) chip.style.display=(completed||wl.list().length>=3)?'none':'';
@@ -2592,7 +2591,8 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     if(state==='1') return;
     if(wl.list().length>=3){ LS('er_onboarded','1'); return; }
     if(chip) chip.style.display='';
-    if(state==='skipped') return;
+    let skippedNow=false; try{ skippedNow=sessionStorage.getItem('er_ob_skipped')==='1'; }catch(e){}
+    if(state==='skipped'&&skippedNow) return;      // skipped this session: leave them alone until next visit
     if(/^#(day-|[A-Za-z]{1,6}$)/.test(location.hash)&&!/^#(earnings|mystocks|news|week|month)$/i.test(location.hash)) return;   // deep-linked to a ticker: don't cover it
     start();
   }
@@ -2625,7 +2625,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907f">
+<script type="module" src="auth.js?v=20260907g">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,

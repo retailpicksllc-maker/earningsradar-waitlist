@@ -652,28 +652,5 @@ if (document.readyState !== "loading") bindOpeners();
 else document.addEventListener("DOMContentLoaded", bindOpeners);
 window.openAuth = (m) => { if (m) setMode(m); open(); };
 
-// Auto-open the sign-in / create-account popup ~5s after landing on the calendar
-// home page — only when signed out, and once per browser session so it isn't nagging.
-(function autoPrompt(){
-  // Fire on the home page OR on the calendar app itself (served at /app.html — detected by #calGrid),
-  // so moving/renaming the calendar page never silently disables the prompt.
-  const isCalendar = !!document.getElementById("calGrid");
-  const isHome = isCalendar || location.pathname.endsWith("/") || /\/(index|app|app_slim)\.html$/.test(location.pathname);
-  if (!isHome) return;
-  try { if (sessionStorage.getItem("er_auth_prompted")) return; } catch (e) {}
-  // The onboarding flow comes first, always. Until app.html has decided whether to run it
-  // (it waits for the session answer, which can take longer than 5s on a slow connection)
-  // and, if it runs, until it is closed, this prompt waits. Onboarding offers sign-in itself
-  // and marks the session as prompted when it finishes, so nobody gets both.
-  const tryOpen = () => {
-    try { if (sessionStorage.getItem("er_auth_prompted")) return; } catch (e) {}
-    if (root.classList.contains("on")) return;   // already open
-    if (auth.currentUser) return;                 // already signed in
-    if (!window._erOnboardDecided || window._erOnboarding) { setTimeout(tryOpen, 1000); return; }
-    try { sessionStorage.setItem("er_auth_prompted", "1"); } catch (e) {}
-    _gated = true;                                // MANDATORY: can't be dismissed until signed in
-    setMode("signin");
-    open();
-  };
-  setTimeout(tryOpen, 5000);
-})();
+// The timed sign-in popup is gone: the onboarding flow in app.html is what a signed-out
+// visitor sees, and it offers sign-in at the point where it is worth something.
