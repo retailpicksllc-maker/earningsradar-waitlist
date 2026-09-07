@@ -10,6 +10,21 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0A1024">
+<!-- Installable app: manifest + service worker make Android/desktop Chrome offer "Install", and
+     the Apple tags make an iOS "Add to Home Screen" open full-screen with the right name. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Earnings Radar">
+<script>
+// beforeinstallprompt fires early, before most of the page has run: stash it for the onboarding
+// install step (it can only be replayed from a user gesture, and only once).
+window._erInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); window._erInstallPrompt=e; });
+window.addEventListener('appinstalled',()=>{ try{localStorage.setItem('er_installed','1');}catch(x){} if(window.erTrack) erTrack('pwa_installed'); });
+if('serviceWorker' in navigator) window.addEventListener('load',()=>{ navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
+</script>
 <title>Earnings Radar — Free Earnings Calendar, EPS Estimates &amp; Results</title>
 <!-- SEO: app.html is the largest page on the site and was in the sitemap with nothing but a
      <title>. Search Console showed 1 indexed page against 803 submitted; a page with no canonical
@@ -503,6 +518,66 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .livechip .beat{color:var(--green)} .livechip .miss{color:var(--red)}
   .livechip .ago{font-size:11px;color:var(--muted);white-space:nowrap}
 
+
+  /* ── Onboarding ─────────────────────────────────────────────────────────── */
+  .obchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45);color:#FDE68A;font-weight:600;font-size:13px;text-decoration:none;white-space:nowrap}
+  .obchip:hover{background:rgba(251,191,36,.2)}
+  #ob{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(6,9,22,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:14px}
+  #ob.on{display:flex}
+  .obcard{width:100%;max-width:520px;max-height:calc(100dvh - 28px);overflow:auto;background:linear-gradient(180deg,#121a3a,#0d1430);border:1px solid rgba(47,107,255,.35);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:22px 22px 18px;position:relative;animation:obin .32s cubic-bezier(.2,.8,.2,1)}
+  @keyframes obin{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+  .obtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .obprog{display:flex;gap:6px}
+  .obprog i{display:block;width:34px;height:5px;border-radius:99px;background:rgba(255,255,255,.12);transition:background .3s}
+  .obprog i.done{background:var(--green)} .obprog i.now{background:var(--blue)}
+  .obskip{background:none;border:0;color:var(--muted);font-size:13px;cursor:pointer;padding:6px}
+  .obskip:hover{color:var(--text)}
+  .obcard h2{font-size:22px;letter-spacing:-.01em;margin:0 0 4px}
+  .obcard .sub{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .obgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+  .obt{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--border2);cursor:pointer;user-select:none;transition:transform .12s,border-color .2s,background .2s}
+  .obt:active{transform:scale(.94)}
+  .obt .tile{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
+  .obt .tile img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .obt b{font-size:12px;letter-spacing:.02em} .obt small{font-size:10.5px;color:var(--muted);line-height:1.1;text-align:center}
+  .obt.on{border-color:var(--green);background:rgba(52,211,153,.10)}
+  .obt.on::after{content:'✓';position:absolute;top:6px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--green);color:#052;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:obpop .25s}
+  @keyframes obpop{from{transform:scale(.2)}to{transform:scale(1)}}
+  .obsearch{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border2);border-radius:11px;padding:9px 12px;margin-bottom:8px}
+  .obsearch input{background:none;border:0;outline:0;color:var(--text);font-size:14px;width:100%}
+  .obres{display:flex;flex-wrap:wrap;gap:6px;min-height:0;margin-bottom:10px}
+  .obres button{background:var(--card2);border:1px solid var(--border2);color:var(--text);border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer}
+  .obres button.on{border-color:var(--green);color:var(--green)}
+  .obfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+  .obcount{color:var(--muted);font-size:13px}
+  .obcount b{color:var(--text)}
+  .obnext{background:var(--grad);color:#fff;border:0;border-radius:12px;padding:12px 20px;font-weight:700;font-size:15px;cursor:pointer;min-width:150px;transition:opacity .2s,transform .12s}
+  .obnext:disabled{opacity:.4;cursor:default} .obnext:not(:disabled):active{transform:scale(.97)}
+  .obghost{background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:12px;padding:11px 16px;font-size:14px;cursor:pointer}
+  .obweek{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
+  .obrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:13px;background:var(--card);border:1px solid var(--border2)}
+  .obrow .tile{width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
+  .obrow .tile img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .obrow .m{flex:1;min-width:0} .obrow .m b{display:block;font-size:14px} .obrow .m span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .obrow .when{text-align:right;flex:none} .obrow .when b{display:block;font-size:13px;color:var(--blueLt)} .obrow .when span{font-size:11.5px;color:var(--muted)}
+  .obrow.first{border-color:rgba(47,107,255,.5);background:rgba(47,107,255,.10)}
+  .obbenefit{display:flex;gap:10px;align-items:flex-start;padding:12px 13px;border-radius:13px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);margin-bottom:12px;font-size:13.5px}
+  .obbenefit .ic{font-size:20px;line-height:1}
+  .obios{display:flex;flex-direction:column;gap:10px;margin:6px 0 14px}
+  .obstep{display:flex;gap:12px;align-items:center;padding:12px 13px;border-radius:13px;background:var(--card);border:1px solid var(--border2);font-size:14px}
+  .obstep .n{width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
+  .obstep svg{width:22px;height:22px;flex:none;stroke:var(--blueLt)}
+  .obicon{width:72px;height:72px;border-radius:18px;margin:4px auto 12px;display:block;box-shadow:0 12px 30px rgba(47,107,255,.35)}
+  .obdone{text-align:center;padding:8px 0 4px}
+  .obdone .big{font-size:44px;line-height:1;margin-bottom:8px}
+  .obchecks{display:flex;flex-direction:column;gap:7px;margin:14px auto 16px;max-width:300px;text-align:left}
+  .obchecks div{display:flex;gap:10px;align-items:center;font-size:14px;opacity:0;animation:obfade .4s forwards}
+  .obchecks div:nth-child(2){animation-delay:.25s} .obchecks div:nth-child(3){animation-delay:.5s}
+  .obchecks i{width:20px;height:20px;border-radius:50%;background:var(--green);color:#052;font-style:normal;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .obchecks div.no i{background:rgba(255,255,255,.14);color:var(--muted)}
+  @keyframes obfade{to{opacity:1}}
+  #obConfetti{position:fixed;inset:0;pointer-events:none;z-index:100001}
+  @media (max-width:420px){ .obgrid{grid-template-columns:repeat(4,1fr);gap:7px} .obt .tile{width:40px;height:40px} .obcard{padding:18px 14px 14px} .obchip{display:none!important} }
 </style>
 </head>
 <body>
@@ -521,6 +596,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
     <a href="#" data-page="news">News</a>
   </div>
   <div class="links navright">
+    <a href="#" id="obChip" class="obchip" style="display:none" title="Pick your stocks and set up alerts">★ Set up my radar</a>
     <a href="#" id="authTrigger" class="cta">Sign in</a>
   </div>
 </div></nav>
@@ -2291,6 +2367,203 @@ setInterval(pollPrices, 5000);
 setInterval(()=>{ if(!document.hidden) loadLiveCalendar(); }, 60000);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ pollPrices(); loadLiveCalendar(); } });
 setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker every 3 min
+
+// ── Onboarding: pick 3 stocks → your week → install → done ──────────────────
+// The watchlist is the product (alerts, My Stocks, the rail all hang off it) and most sign-ups
+// never starred anything. So the first thing a new visitor does is star three names from a
+// grid of companies reporting soon, then sees THEIR week as the payoff, then puts the app on
+// their home screen. Works signed out; sign-in is offered at the payoff, never demanded.
+(function(){
+  const LS=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } };
+  const $id=id=>document.getElementById(id);
+  const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }catch(e){ return false; } };
+  const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  const isMobile=()=>isIOS() || /Android/i.test(navigator.userAgent);
+  const POPULAR=['NVDA','AAPL','TSLA','MSFT','AMZN','GOOGL','META','AMD','NFLX','AVGO','PLTR','COST','JPM','ORCL','ADBE','CRM','WMT','DIS','UBER','COIN'];
+  const FALLBACK={NVDA:'NVIDIA',AAPL:'Apple',TSLA:'Tesla',MSFT:'Microsoft',AMZN:'Amazon',GOOGL:'Alphabet',META:'Meta',AMD:'AMD',NFLX:'Netflix',AVGO:'Broadcom',PLTR:'Palantir',COST:'Costco',JPM:'JPMorgan',ORCL:'Oracle',ADBE:'Adobe',CRM:'Salesforce',WMT:'Walmart',DIS:'Disney',UBER:'Uber',COIN:'Coinbase'};
+  let _NAMES=null;
+  const nameOf=s=>(_NAMES&&_NAMES[s])||(META[s]&&META[s].name&&META[s].name!==s?META[s].name:null)||FALLBACK[s]||s;
+  const shortName=s=>{ let n=nameOf(s); if(!n) return s; n=n.replace(/,?\s+(Inc|Corp|Corporation|Company|Co|Ltd|plc|Holdings|Group|Technologies|Limited|Incorporated|N\.V\.|S\.A\.)\.?(\s|$).*/i,'').trim(); return n.length>16?n.slice(0,15)+'…':n; };
+  const tile=(s,cls)=>`<div class="${cls||'tile'}" style="background:${monoColor(s)}"><img src="${logoURL(s)}" alt="" loading="lazy" onerror="this.remove()">${s[0]}</div>`;
+
+  // Watchlist ops that work whether or not auth.js (which owns erWatch) has loaded yet.
+  const wl={
+    list(){ if(window.erWatch) return erWatch.list(); try{ return JSON.parse(LS('er_watchlist')||'[]'); }catch(e){ return []; } },
+    has(s){ return this.list().includes(s); },
+    toggle(s){ if(window.erWatch) return erWatch.toggle(s); const l=this.list(); const i=l.indexOf(s); if(i>=0) l.splice(i,1); else l.push(s); LS('er_watchlist',JSON.stringify(l)); return i<0; }
+  };
+
+  // Companies reporting soon, biggest first — the grid a first-timer sees.
+  function candidates(){
+    const today=iso(new Date()); const lim=iso(new Date(Date.now()+21*864e5));
+    const seen=new Set(); const out=[];
+    const rows=DATA.filter(r=>r.date>=today&&r.date<=lim&&!/^[A-Z]{4}F$/.test(r.symbol)&&!/[.\-]/.test(r.symbol))
+      .sort((a,b)=>(+String(b.marketCap).replace(/\D/g,'')||0)-(+String(a.marketCap).replace(/\D/g,'')||0));
+    for(const r of rows){ if(seen.has(r.symbol)) continue; seen.add(r.symbol); out.push(r.symbol); if(out.length>=12) break; }
+    for(const p of POPULAR){ if(out.length>=16) break; if(!seen.has(p)){ seen.add(p); out.push(p); } }
+    return out;
+  }
+  function nextReport(s){
+    const today=iso(new Date());
+    const r=DATA.filter(r=>r.symbol===s&&r.date>=today).sort((a,b)=>a.date<b.date?-1:1)[0];
+    if(!r) return null;
+    const d=new Date(r.date+'T12:00:00');
+    const days=Math.round((d-new Date(today+'T12:00:00'))/864e5);
+    const when=days===0?'Today':days===1?'Tomorrow':d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    const sess=r.time==='time-pre-market'?'before open':r.time==='time-after-hours'?'after close':(r.row&&r.row.expectedTime)||'';
+    const est=r.row&&r.row.eps!=null?`EPS est ${fmtEps(r.row.eps)}`:'';
+    return {sym:s,date:r.date,days,when,sess,est};
+  }
+
+  let step=0, steps=[], host=null;
+  function progress(){ return `<div class="obprog">${steps.map((_,i)=>`<i class="${i<step?'done':i===step?'now':''}"></i>`).join('')}</div>`; }
+  function frame(inner,{skip=true}={}){
+    host.innerHTML=`<div class="obcard"><div class="obtop">${progress()}${skip?'<button class="obskip" data-skip>Skip</button>':'<span></span>'}</div>${inner}</div>`;
+    const sk=host.querySelector('[data-skip]'); if(sk) sk.onclick=()=>{ erTrack('onboard_skip',{step:steps[step]}); finish(false); };
+    host.querySelector('.obcard').scrollTop=0;
+  }
+
+  // Step 1 — pick your stocks
+  function renderPick(){
+    const cands=candidates();
+    const inner=`
+      <h2>Pick 3 stocks you follow</h2>
+      <p class="sub">We'll track their earnings dates, estimates and results for you. Tap to star.</p>
+      <div class="obgrid" id="obGrid">${cands.map(s=>`<div class="obt${wl.has(s)?' on':''}" data-s="${s}">${tile(s)}<b>${s}</b><small>${esc(shortName(s))}</small></div>`).join('')}</div>
+      <div class="obsearch">🔎<input id="obQ" placeholder="Search any ticker (e.g. SOFI)" autocomplete="off" spellcheck="false"></div>
+      <div class="obres" id="obRes"></div>
+      <div class="obfoot"><span class="obcount" id="obCount"></span><button class="obnext" id="obNext" disabled>Continue</button></div>`;
+    frame(inner);
+    const paint=()=>{ const n=wl.list().length; $id('obCount').innerHTML=n>=3?`<b>${n} picked</b> — nice`:`<b>${n} of 3</b> picked`; $id('obNext').disabled=n<3; $id('obNext').textContent=n>=3?'Show my week →':'Continue'; };
+    host.querySelectorAll('.obt').forEach(el=>{ el.onclick=()=>{ const s=el.dataset.s; const on=wl.toggle(s); el.classList.toggle('on',on); erTrack(on?'onboard_star':'onboard_unstar',{ticker:s}); paint(); }; });
+    const q=$id('obQ'), res=$id('obRes');
+    q.oninput=()=>{ const m=(typeof searchMatches==='function'?searchMatches(q.value):[]).slice(0,6);
+      res.innerHTML=m.map(s=>`<button data-s="${s}" class="${wl.has(s)?'on':''}">${wl.has(s)?'★ ':''}${s} <span style="color:var(--muted)">${esc(shortName(s))}</span></button>`).join('');
+      res.querySelectorAll('button').forEach(b=>{ b.onclick=()=>{ const s=b.dataset.s; const on=wl.toggle(s); b.classList.toggle('on',on); b.innerHTML=`${on?'★ ':''}${s} <span style="color:var(--muted)">${esc(shortName(s))}</span>`; const g=host.querySelector(`.obt[data-s="${s}"]`); if(g) g.classList.toggle('on',on); erTrack(on?'onboard_star':'onboard_unstar',{ticker:s,via:'search'}); paint(); }; }); };
+    q.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); const b=res.querySelector('button'); if(b) b.click(); } };
+    $id('obNext').onclick=()=>{ erTrack('onboard_picked',{n:wl.list().length}); next(); };
+    paint();
+  }
+
+  // Step 2 — your week (the payoff) + sign-in offer
+  function renderWeek(){
+    const list=wl.list().map(nextReport).filter(Boolean).sort((a,b)=>a.days-b.days);
+    const none=wl.list().filter(s=>!nextReport(s));
+    const rows=list.slice(0,4).map((r,i)=>`<div class="obrow${i===0?' first':''}">${tile(r.sym)}<div class="m"><b>${r.sym}</b><span>${esc(nameOf(r.sym))}${r.est?' · '+r.est:''}</span></div><div class="when"><b>${r.when}</b><span>${esc(r.sess)}</span></div></div>`).join('');
+    const first=list[0];
+    const signed=!!(window.erWatch&&erWatch.signedIn());
+    const inner=`
+      <h2>${first?`${first.sym} reports ${first.days===0?'today':first.days===1?'tomorrow':'in '+first.days+' days'}`:'Your radar is set'}</h2>
+      <p class="sub">${first?'Here is your week. Estimates update live; results land within minutes of the release.':'None of your picks have a date yet — we will add them the moment one is announced.'}</p>
+      <div class="obweek">${rows}${none.length&&list.length?`<div class="obrow"><div class="m"><span>${none.join(', ')}: no date announced yet</span></div></div>`:''}</div>
+      ${signed?`<div class="obbenefit"><span class="ic">📬</span><div><b>Alerts on.</b> You'll get an email the moment each of these reports, with the result vs. estimate.</div></div>`
+             :`<div class="obbenefit"><span class="ic">📬</span><div><b>Want the result in your inbox?</b> Sign in (free) and we'll email you the moment each of these reports — and your list syncs to your phone.</div></div>`}
+      <div class="obfoot">${signed?'<span></span>':'<button class="obghost" id="obLater">Not now</button>'}<button class="obnext" id="obNext">${signed?'Continue →':'Sign in for alerts'}</button></div>`;
+    frame(inner);
+    $id('obNext').onclick=()=>{
+      if(signed){ next(); return; }
+      erTrack('onboard_signin_click');
+      if(typeof openAuth==='function'){ openAuth('signup'); }
+      else if(window.erWatch) erWatch.promptSignIn();
+      // Resume the flow once the auth modal closes (signed in or not).
+      let seenOpen=false; const t=setInterval(()=>{ const a=document.querySelector('.erAuth'); const open=!!(a&&a.classList.contains('on')); if(open) seenOpen=true; if(seenOpen&&!open){ clearInterval(t); next(); } },500); setTimeout(()=>{ if(!seenOpen){ clearInterval(t); next(); } },4000);
+    };
+    const l=$id('obLater'); if(l) l.onclick=()=>{ erTrack('onboard_signin_later'); next(); };
+  }
+
+  // Step 3 — install
+  function installMode(){
+    if(isStandalone()||LS('er_installed')==='1') return null;
+    if(window._erInstallPrompt) return 'prompt';
+    if(isIOS()) return 'ios';
+    return null;                      // desktop without a prompt: nothing honest to offer
+  }
+  function renderInstall(){
+    const mode=installMode();
+    const share=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>`;
+    const plus=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>`;
+    const inner=`
+      <img class="obicon" src="/icon-192.png" alt="">
+      <h2 style="text-align:center">Put Earnings Radar on your home screen</h2>
+      <p class="sub" style="text-align:center">Opens full-screen like an app, one tap from your watchlist. No app store, nothing to update.</p>
+      ${mode==='ios'?`<div class="obios">
+          <div class="obstep"><span class="n">1</span>${share}<span>Tap the <b>Share</b> button at the bottom of Safari</span></div>
+          <div class="obstep"><span class="n">2</span>${plus}<span>Scroll down and tap <b>Add to Home Screen</b></span></div>
+          <div class="obstep"><span class="n">3</span><span style="font-size:20px">✅</span><span>Tap <b>Add</b> — done</span></div></div>`:''}
+      <div class="obfoot"><button class="obghost" id="obLater">Maybe later</button><button class="obnext" id="obNext">${mode==='prompt'?'Install':'I added it'}</button></div>`;
+    frame(inner);
+    $id('obLater').onclick=()=>{ erTrack('onboard_install_later'); next(); };
+    $id('obNext').onclick=async()=>{
+      if(mode==='prompt'){
+        const ev=window._erInstallPrompt; window._erInstallPrompt=null;
+        try{ ev.prompt(); const c=await ev.userChoice; erTrack('onboard_install_prompt',{outcome:c&&c.outcome}); if(c&&c.outcome==='accepted') LS('er_installed','1'); }catch(e){}
+      } else erTrack('onboard_install_ios_done');
+      next();
+    };
+  }
+
+  // Done — checklist + confetti, then drop them into My Stocks.
+  function renderDone(){
+    const n=wl.list().length, signed=!!(window.erWatch&&erWatch.signedIn()), inst=isStandalone()||LS('er_installed')==='1';
+    const first=wl.list().map(nextReport).filter(Boolean).sort((a,b)=>a.days-b.days)[0];
+    const inner=`<div class="obdone"><div class="big">🎯</div><h2>You're on the radar</h2>
+      <p class="sub">${first?`First up: <b style="color:var(--text)">${first.sym}</b> ${first.when.toLowerCase()==='today'?'today':first.when.toLowerCase()==='tomorrow'?'tomorrow':'on '+first.when}${first.sess?' '+first.sess:''}.`:'We will flag your first report the moment a date is set.'}</p>
+      <div class="obchecks">
+        <div><i>✓</i>Watching ${n} stock${n===1?'':'s'}</div>
+        <div class="${signed?'':'no'}"><i>${signed?'✓':'·'}</i>${signed?'Result alerts on':'Alerts off — sign in any time'}</div>
+        <div class="${inst?'':'no'}"><i>${inst?'✓':'·'}</i>${inst?'On your home screen':'Not installed yet'}</div>
+      </div>
+      <button class="obnext" id="obNext" style="width:100%">Open my calendar</button></div>`;
+    frame(inner,{skip:false});
+    confetti();
+    $id('obNext').onclick=()=>finish(true);
+  }
+
+  function confetti(){
+    const c=document.createElement('canvas'); c.id='obConfetti'; document.body.appendChild(c);
+    const ctx=c.getContext('2d'); const dpr=Math.min(2,window.devicePixelRatio||1);
+    c.width=innerWidth*dpr; c.height=innerHeight*dpr; ctx.scale(dpr,dpr);
+    const cols=['#2F6BFF','#6BA5FF','#34D399','#FBBF24','#FF8A3D','#F87171','#fff'];
+    const ps=Array.from({length:140},()=>({x:innerWidth/2+(Math.random()-.5)*60,y:innerHeight*.45,vx:(Math.random()-.5)*14,vy:-Math.random()*13-4,g:.35,w:6+Math.random()*6,h:8+Math.random()*8,r:Math.random()*Math.PI,vr:(Math.random()-.5)*.3,c:cols[Math.floor(Math.random()*cols.length)]}));
+    const t0=performance.now();
+    (function tick(t){ const el=(t-t0)/1000; ctx.clearRect(0,0,innerWidth,innerHeight);
+      for(const p of ps){ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.vx*=.99; p.r+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.fillStyle=p.c; ctx.globalAlpha=Math.max(0,1-Math.max(0,el-1.4)); ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); }
+      if(el<2.4) requestAnimationFrame(tick); else c.remove(); })(t0);
+  }
+
+  function next(){ step++; if(step>=steps.length){ renderDone(); return; } render(); }
+  function render(){ ({pick:renderPick,week:renderWeek,install:renderInstall})[steps[step]](); }
+  function finish(completed){
+    host.classList.remove('on'); host.innerHTML='';
+    window._erOnboarding=false;
+    LS('er_onboarded',completed?'1':'skipped');
+    try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
+    const chip=$id('obChip'); if(chip) chip.style.display=(completed||wl.list().length>=3)?'none':'';
+    if(completed&&wl.list().length){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
+    erTrack(completed?'onboard_complete':'onboard_exit',{n:wl.list().length,step:steps[step]||'done'});
+  }
+
+  function start(){
+    if(window._erOnboarding) return;
+    if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
+    window._erOnboarding=true; step=0;
+    steps=['pick','week']; if(installMode()) steps.push('install');
+    host.classList.add('on'); erTrack('onboard_start',{steps:steps.length,mobile:isMobile()?1:0});
+    if(!_NAMES) fetch('names.json').then(r=>r.ok?r.json():{}).then(j=>{ _NAMES=j||{}; if(steps[step]==='pick') host.querySelectorAll('.obt small').forEach(el=>{ el.textContent=shortName(el.parentElement.dataset.s); }); }).catch(()=>{});
+    render();
+  }
+  window.erOnboard=start;
+
+  // Auto-start for first-timers; returning users who already star things are marked done.
+  const chip=$id('obChip'); if(chip) chip.onclick=e=>{ e.preventDefault(); start(); };
+  const state=LS('er_onboarded');
+  if(state==='1') return;
+  if(wl.list().length>=3){ LS('er_onboarded','1'); return; }
+  if(chip) chip.style.display='';
+  if(state==='skipped') return;
+  if(/^#(day-|[A-Za-z]{1,6}$)/.test(location.hash)&&!/^#(earnings|mystocks|news|week|month)$/i.test(location.hash)) return;   // deep-linked to a ticker: don't cover it
+  setTimeout(start,700);
+})();
 
 // ── Cookie consent banner (GA4 Consent Mode) ────────────────────────────────
 (function(){

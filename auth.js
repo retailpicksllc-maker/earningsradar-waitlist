@@ -610,6 +610,7 @@ window.openAuth = (m) => { if (m) setMode(m); open(); };
   setTimeout(() => {
     if (root.classList.contains("on")) return;   // already open
     if (auth.currentUser) return;                 // already signed in
+    if (window._erOnboarding) return;             // onboarding owns the sign-in moment (its "your week" step offers it)
     try { sessionStorage.setItem("er_auth_prompted", "1"); } catch (e) {}
     _gated = true;                                // MANDATORY: can't be dismissed until signed in
     setMode("signin");

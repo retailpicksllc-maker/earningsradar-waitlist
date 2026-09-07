@@ -1,0 +1,22 @@
+{
+  "name": "Earnings Radar",
+  "short_name": "Earnings Radar",
+  "description": "Free earnings calendar: estimates, results and alerts for the stocks you watch.",
+  "id": "/app.html",
+  "start_url": "/app.html?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1024",
+  "theme_color": "#0A1024",
+  "categories": ["finance", "business"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "My Stocks", "url": "/app.html?src=pwa#mystocks", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "This week", "url": "/app.html?src=pwa#week", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
