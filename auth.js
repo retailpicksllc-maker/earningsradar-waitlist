@@ -587,7 +587,13 @@ q("[data-vcheck]").onclick = async () => {
 };
 
 /* auth state → swap modal view + update the nav trigger label */
+let _authResolved = false;
 onAuthStateChanged(auth, (user) => {
+  const initial = !_authResolved; _authResolved = true;
+  // Tell the page the session question is settled (the onboarding auto-start waits for this:
+  // deciding at 700ms, before Firebase had answered, let a stale synced list mark a signed-out
+  // visitor as "already onboarded" and then get cleared a second later).
+  setTimeout(() => { try { window.dispatchEvent(new CustomEvent("er:auth", { detail: { user: !!user, initial } })); } catch (e) {} }, 0);
   const trigger = document.getElementById("authTrigger");
   // Hide "Create account" / sign-in CTAs across the page when signed in.
   document.querySelectorAll("[data-auth-open]").forEach((el) => { el.style.display = user ? "none" : ""; });

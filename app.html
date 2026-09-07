@@ -2566,15 +2566,24 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   }
   window.erOnboard=start;
 
-  // Auto-start for first-timers; returning users who already star things are marked done.
+  // Auto-start for first-time visitors -- but only once auth.js has settled whether there is a
+  // session. Signed-in accounts are handled by the watchlist sync (once per account); a
+  // signed-out visitor with no stars of their own gets the picker.
   const chip=$id('obChip'); if(chip) chip.onclick=e=>{ e.preventDefault(); start(); };
-  const state=LS('er_onboarded');
-  if(state==='1') return;
-  if(wl.list().length>=3){ LS('er_onboarded','1'); return; }
-  if(chip) chip.style.display='';
-  if(state==='skipped') return;
-  if(/^#(day-|[A-Za-z]{1,6}$)/.test(location.hash)&&!/^#(earnings|mystocks|news|week|month)$/i.test(location.hash)) return;   // deep-linked to a ticker: don't cover it
-  setTimeout(start,700);
+  function maybeStart(){
+    if(window._erOnboarding) return;
+    if(window.erWatch&&erWatch.signedIn()) return;
+    const state=LS('er_onboarded');
+    if(state==='1') return;
+    if(wl.list().length>=3){ LS('er_onboarded','1'); return; }
+    if(chip) chip.style.display='';
+    if(state==='skipped') return;
+    if(/^#(day-|[A-Za-z]{1,6}$)/.test(location.hash)&&!/^#(earnings|mystocks|news|week|month)$/i.test(location.hash)) return;   // deep-linked to a ticker: don't cover it
+    start();
+  }
+  let _authSeen=false;
+  window.addEventListener('er:auth',e=>{ _authSeen=true; if(e.detail&&e.detail.initial&&!e.detail.user) setTimeout(maybeStart,250); });
+  setTimeout(()=>{ if(!_authSeen) maybeStart(); },4000);   // auth.js blocked or failed: visitors still get the flow
 })();
 
 // ── Cookie consent banner (GA4 Consent Mode) ────────────────────────────────
@@ -2601,7 +2610,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907d">
+<script type="module" src="auth.js?v=20260907e">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,
