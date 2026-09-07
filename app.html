@@ -2605,8 +2605,17 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     if(completed&&window.erMarkOnboarded) erMarkOnboarded('done');   // on the account (if any), so it never replays
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const signed=!!(window.erWatch&&erWatch.signedIn());
-    if(completed&&wl.list().length&&signed){ _myOnly=true; LS('er_myonly','1'); const b=$id('myStocksBtn'); if(b) b.classList.add('on'); try{ renderCalendar(); }catch(e){} toast(`Watching ${wl.list().length} stocks — ★ on any ticker adds more`); }
-    else if(completed&&wl.list().length){ toast('Sign in any time to save these stocks and get alerts'); }
+    // "Open my calendar" means the calendar: close anything else that is open (the sign-in
+    // modal if it is still up), switch to the Calendar tab, full view, top of the page.
+    if(completed){
+      try{ document.querySelectorAll('.erAuth.on').forEach(a=>a.classList.remove('on')); }catch(e){}
+      try{ if(typeof setPage==='function') setPage('cal'); }catch(e){}
+      _myOnly=false; LS('er_myonly','0'); const b=$id('myStocksBtn'); if(b) b.classList.remove('on');
+      try{ dayView=null; weekOffset=0; renderCalendar(); }catch(e){}
+      try{ history.replaceState({v:'root'},'',location.pathname+location.search); }catch(e){}
+      try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){}
+      if(wl.list().length) toast(signed?`Watching ${wl.list().length} stocks — ★ My Stocks shows just yours`:'Sign in any time to save these stocks and get alerts');
+    }
     erTrack(completed?'onboard_complete':'onboard_exit',{n:wl.list().length,step:steps[step]||'done'});
   }
 
