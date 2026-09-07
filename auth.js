@@ -319,7 +319,7 @@ root.innerHTML = `
           </div>
         </div>
         <div class="row">
-          <a class="primary" href="index.html" style="text-align:center;text-decoration:none;display:block">Open the calendar →</a>
+          <a class="primary" href="/app.html" data-opencal style="text-align:center;text-decoration:none;display:block">Open the calendar →</a>
           <button class="ghost" data-signout type="button">Sign out</button>
         </div>
         <button class="dellink" data-delopen type="button">Delete account</button>
@@ -441,6 +441,15 @@ q("[data-forgot]").onclick = async () => {
   catch (err) { showError(err); }
 };
 
+// "Open the calendar" used to link to index.html -- the marketing page. On the app it just
+// closes this modal and shows the Calendar tab; anywhere else it goes to the app.
+q("[data-opencal]").onclick = (e) => {
+  if (!document.getElementById("calGrid")) return;          // not on the app: follow the link
+  e.preventDefault();
+  close();
+  try { if (typeof setPage === "function") setPage("cal"); } catch (x) {}
+  try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch (x) {}
+};
 q("[data-signout]").onclick = async () => { _tFlush(); await signOut(auth); _forgetLocal(); };
 
 /* account deletion — requires re-entering the password (or a Google re-auth popup) first */
