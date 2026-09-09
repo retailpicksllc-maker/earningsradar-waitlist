@@ -287,7 +287,8 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .sheet h2{font-size:22px;font-weight:900} .sheet .nm{color:var(--muted);font-size:13px}
   .sheet .x{background:var(--card);border:1px solid var(--border2);color:var(--text);width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:14px;flex:none}
   .detpx{margin-left:auto;text-align:right;line-height:1.15}
-  .detpx .px{font-size:21px;font-weight:900;letter-spacing:-.3px}
+  .detpx .px{font-size:21px;font-weight:900;letter-spacing:-.3px;white-space:nowrap}
+  @media (max-width:480px){ .detpx .px{font-size:17px} .detpx{flex:0 0 auto} #sheet .top h2{font-size:20px} #sheet .top .nm{font-size:12.5px;overflow-wrap:anywhere} }
   .detpx .chg{font-size:12.5px;font-weight:800}
   .detpx .chg.up{color:#16c784} .detpx .chg.down{color:#ea3943}
   .detpx .ah{font-size:11px;color:var(--muted);margin-top:1px}
@@ -523,7 +524,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   #ob{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;background:rgba(6,9,22,.78);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:14px}
   #ob.on{display:flex}
   #ob.on.wait{display:none}
-  .obcard{width:100%;max-width:520px;max-height:calc(100dvh - 28px);overflow:auto;background:linear-gradient(180deg,#121a3a,#0d1430);border:1px solid rgba(47,107,255,.35);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:22px 22px 18px;position:relative;animation:obin .32s cubic-bezier(.2,.8,.2,1)}
+  .obcard{width:100%;max-width:520px;max-height:calc(100dvh - 28px);overflow:auto;overflow-x:hidden;background:linear-gradient(180deg,#121a3a,#0d1430);border:1px solid rgba(47,107,255,.35);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:22px 22px 18px;position:relative;animation:obin .32s cubic-bezier(.2,.8,.2,1)}
   @keyframes obin{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
   .obtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .obprog{display:flex;gap:6px}
@@ -534,7 +535,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   .obcard h2{font-size:22px;letter-spacing:-.01em;margin:0 0 4px}
   .obcard .sub{color:var(--muted);font-size:14px;margin:0 0 14px}
   .obgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
-  .obt{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--border2);cursor:pointer;user-select:none;transition:transform .12s,border-color .2s,background .2s}
+  .obt{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px 9px;border-radius:14px;background:var(--card);border:1px solid var(--border2);cursor:pointer;user-select:none;transition:transform .12s,border-color .2s,background .2s}
   .obt:active{transform:scale(.94)}
   .obt .tile{position:relative;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;overflow:hidden;background:#1b2447}
   .obt .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;display:block}
@@ -1159,7 +1160,7 @@ async function loadLiveCalendar(){
     const rows=Array.isArray(j)?j:(j.data||j.events||j.calendar||[]);
     const mapped=rows.map(mapWorkerRow).filter(x=>x.symbol&&x.date);
     if(!mapped.length) showStaleNotice();
-    if(mapped.length){ DATA=mapped; renderCalendar(); try{ renderRail(); }catch(e){}
+    if(mapped.length){ DATA=mapped; _capOf=null; renderCalendar(); try{ renderRail(); }catch(e){}
       // A popup opened from a #TICKER deep link renders before this first fetch lands, so it
       // showed 'reports soon' with dashes while the recap below had the real numbers.
       // Re-open it once, silently, now that the event rows exist.
@@ -1480,7 +1481,11 @@ async function loadDetDividends(sym){
     const j=await r.json(); const rows=(j.dividends||[]).filter(d=>d&&d.dividend!=null);
     if(!rows.length){ el.innerHTML='<div class="seclabel">Dividends</div><div class="divempty">No dividend history — this company doesn\'t currently pay one.</div>'; return; }
     const f=(rows[0].frequency||'').toLowerCase();
-    el.innerHTML='<div class="seclabel">Dividend history'+(f?` · ${esc(f)}`:'')+'</div>'+_divChart(rows)+rows.map(d=>{
+    // A last ex-date more than 18 months back is a dividend that stopped, not a "latest payout":
+    // GameStop's tab read "$0.38 latest payout, +6% since 2015" on a 2019 ex-date.
+    let stopped='';
+    try{ const last=new Date(String(rows[0].date||'').slice(0,10)+'T00:00:00'); if(!isNaN(last)&&(Date.now()-last)>548*864e5) stopped=`<div class="divempty" style="margin-bottom:10px">No dividend since ${esc(String(rows[0].date).slice(0,4))} — the history below is what it used to pay.</div>`; }catch(e){}
+    el.innerHTML='<div class="seclabel">Dividend history'+(f&&!stopped?` · ${esc(f)}`:'')+'</div>'+stopped+(stopped?'':_divChart(rows))+rows.map(d=>{
       const amt=(+d.dividend).toFixed(4).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
       return `<div class="divrow"><div><b>$${amt}</b> <span class="mutx">per share</span></div>
         <div class="mutx">ex ${esc(d.date||'—')}${d.paymentDate?' · paid '+esc(d.paymentDate):''}</div></div>`;
@@ -1915,7 +1920,7 @@ async function loadDetNews(sym){
   try{
     const r=await fetch(`${WORKER_BASE}/v1/news/${encodeURIComponent(sym)}`,{cache:'no-store'});
     if(!r.ok) return; const j=await r.json();
-    const items=(j&&j.news)?j.news:[]; if(!items.length) return;
+    const items=((j&&j.news)?j.news:[]).filter(n=>!_junkNews(n.headline||n.title)); if(!items.length) return;
     // rank 2 = the company is the subject; anything less merely mentions it. Vendors tag both
     // the same way, which is how Coca-Cola's news tab filled with generic dividend listicles.
     const fd=ts=>{try{ if(typeof ts==='string'&&ts.includes('-')) return new Date(ts.replace(' ','T')).toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -2040,15 +2045,33 @@ let _allTickers=[...new Set(DATA.map(r=>r.symbol).filter(Boolean))];   // calend
   }catch(e){}
 })();
 const sIn=$('#search'), sRes=$('#searchResults'); let _shl=-1, _smatches=[];
+sIn.addEventListener('focus',()=>{ if(typeof _NM!=='undefined'&&!_NM&&!_NMP){ _NMP=fetch('names.json').then(r=>r.ok?r.json():{}).catch(()=>({})); _NMP.then(j=>{_NM=j||{};}); } },{once:true});
+// Search ranks by size, not alphabet: "NV" must offer NVDA before NVA and NVAX, "AP" Apple
+// before APA. Caps come from the calendar rows (five months of events covers every large cap);
+// unknown caps rank last. Company names match too once names.json has loaded ("apple" → AAPL).
+let _capOf=null;
+function _capMap(){
+  if(_capOf) return _capOf;
+  _capOf={}; for(const r of DATA){ const c=+String(r.marketCap||'').replace(/\D/g,'')||0; if(c>(_capOf[r.symbol]||0)) _capOf[r.symbol]=c; }
+  return _capOf;
+}
 function searchMatches(q){
   q=q.trim().toUpperCase(); if(!q) return [];
-  const starts=[], contains=[];
+  const cap=_capMap(); const byCap=(a,b)=>(cap[b]||0)-(cap[a]||0);
+  const exact=[], starts=[], contains=[];
   for(const t of _allTickers){
-    if(t===q) starts.unshift(t);
+    if(t===q) exact.push(t);
     else if(t.startsWith(q)) starts.push(t);
     else if(t.includes(q)) contains.push(t);
   }
-  return [...new Set([...starts, ...contains])].slice(0,8);
+  starts.sort(byCap); contains.sort(byCap);
+  const names=[];
+  if(q.length>=3&&typeof _NM!=='undefined'&&_NM){
+    const ql=q.toLowerCase();
+    for(const t of _allTickers){ const n=_NM[t]; if(n&&n.toLowerCase().includes(ql)) names.push(t); }
+    names.sort(byCap);
+  }
+  return [...new Set([...exact, ...starts, ...names, ...contains])].slice(0,8);
 }
 function _recent(){ try{ return JSON.parse(localStorage.getItem('er_recent')||'[]'); }catch(e){ return []; } }
 function _recAdd(sym){ try{ let r=_recent().filter(t=>t!==sym); r.unshift(sym); localStorage.setItem('er_recent', JSON.stringify(r.slice(0,10))); }catch(e){} }
@@ -2207,13 +2230,20 @@ function _newsMatch(a,k){
   const rx=NEWS_CAT_RX[k]; if(!rx) return true;
   return rx.test((a.headline||'')+' '+(a.summary||''));
 }
+// Law-firm solicitations dressed as news ("Shareholders Who Lost Money Urged To Contact ... LLP",
+// "Class Action Deadline Reminder") crowd out real coverage on any ticker that has dipped.
+// Alibaba's tab was three of them in a row. Not news; never shown.
+function _junkNews(h){
+  h=String(h||'');
+  return /(shareholders?|investors?) (who|that) (lost|suffered)|urged to contact|class action|securities (fraud|class)|deadline (reminder|alert|approaching)|lead plaintiff|\bLLP\b|law firm|investor alert|shareholder (alert|rights|notice)|lawsuit (alert|filed against)|investigat(es|ing|ion) (on behalf of|of)/i.test(h);
+}
 async function renderNewsPage(){
   const el=document.getElementById('pageNews'); if(!el) return;
   if(!_newsCache) el.innerHTML=`<div class="ptitle"><h1>Market News</h1></div><div class="pempty">Loading headlines…</div>`;
   try{
     if(!_newsCache||Date.now()-_newsTs>60000){
       const r=await fetch(`${WORKER_BASE}/v1/marketnews?limit=60`,{cache:'no-store'});
-      if(r.ok){ const j=await r.json(); _newsCache=j.news||[]; _newsTs=Date.now(); }
+      if(r.ok){ const j=await r.json(); _newsCache=(j.news||[]).filter(a=>!_junkNews(a.headline||a.title)); _newsTs=Date.now(); }
     }
     if(!_newsCache||!_newsCache.length) throw new Error('empty');
     const ago=ts=>{ if(!ts) return ''; const s=(Date.now()/1000)-ts;
@@ -2405,7 +2435,10 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   const shortName=s=>{ let n=nameOf(s); if(!n) return s; n=n.replace(/,?\s+(Inc|Corp|Corporation|Company|Co|Ltd|plc|Holdings|Group|Technologies|Limited|Incorporated|N\.V\.|S\.A\.)\.?(\s|$).*/i,'').trim(); return n.length>16?n.slice(0,15)+'…':n; };
   // The letter is only a placeholder: it shows until the logo loads, then hides; if the logo
   // fails it stays. Nothing else is ever drawn inside the tile.
-  const tile=(s,cls)=>`<div class="${cls||'tile'}" style="background:${monoColor(s)}"><span class="ltr">${s[0]}</span><img src="${logoURL(s)}" alt="" loading="lazy" onload="this.previousElementSibling.style.display='none'" onerror="this.remove()"></div>`;
+  // Same loader as the calendar tiles: logo.dev, then the share-class base, then a second
+  // provider, and the monogram stays if every source fails or returns a blank.
+  const tile=(s,cls)=>`<div class="${cls||'tile'} mono" style="background:${monoColor(s)}" data-logo="${esc(s)}">${s[0]}</div>`;
+  const loadTiles=()=>{ try{ host.querySelectorAll('[data-logo]').forEach(el=>_loadLogo(el)); }catch(e){} };
 
   // Watchlist ops that work whether or not auth.js (which owns erWatch) has loaded yet.
   const wl={
@@ -2437,6 +2470,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     // No Skip and no backdrop dismiss: like the sign-in prompt it replaced, this runs to the end.
     host.innerHTML=`<div class="obcard"><div class="obtop">${progress()}<span></span></div>${inner}</div>`;
     host.querySelector('.obcard').scrollTop=0;
+    loadTiles();
   }
 
   // Step 1 — pick your stocks
