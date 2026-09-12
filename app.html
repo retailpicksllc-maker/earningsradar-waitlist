@@ -600,7 +600,25 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
     .tabbar a.active svg{stroke:var(--blueLt)}
     .railtoggle{bottom:calc(74px + env(safe-area-inset-bottom));right:12px;padding:9px 14px;font-size:12.5px}
     /* calendar chrome: no hero title, one compact sticky control bar */
-    .calhead{display:none}
+    .calhead{display:block;margin:10px 0 0;text-align:left}
+    .caltitle{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+    .caltitle h1{font-size:17px;letter-spacing:-.3px}
+    .caltitle p{font-size:12.5px;margin:0}
+    /* week as a day strip: the desktop's five columns, one at a time */
+    .dstrip{display:flex;gap:6px;margin:0 0 10px;overflow-x:auto;scrollbar-width:none}
+    .dstrip::-webkit-scrollbar{display:none}
+    .dchip{flex:1 0 auto;min-width:56px;text-align:center;padding:7px 6px 6px;border-radius:12px;background:var(--card);border:1px solid var(--border2);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+    .dchip small{display:block;font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    .dchip b{display:block;font-size:16px;line-height:1.15;margin-top:1px}
+    .dchip i{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--blueLt);margin-top:2px;min-height:12px}
+    .dchip.on{background:rgba(47,107,255,.22);border-color:var(--blue)}
+    .dchip.today small{color:var(--green)}
+    .dchip.none b,.dchip.none small{color:rgba(154,164,194,.5)}
+    .calweek.paged .daycol{display:none}
+    .calweek.paged .daycol.on{display:block}
+    .calweek.paged .daycol .dayhead{display:none}
+    .calweek.paged .daycol:has(.emptyday){padding:22px 0;justify-content:center}
+    .calweek.paged .emptyday::after{content:' No reports on this day'}
     .calbar{position:sticky;top:0;z-index:30;margin:8px 0 12px;padding:8px 9px;gap:8px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
     .weeknav{width:100%;justify-content:space-between}
     .weeklabel{min-width:0;flex:1;font-size:15px}
@@ -984,11 +1002,57 @@ function renderGrid(){
   }
   $('#calGrid').innerHTML=html;
   upgradeLogos($('#calGrid'));
+  _phoneWeek();
 }
+// ── Phone: the week is paged, one day at a time, with a strip of day chips on top. The desktop
+// grid is untouched -- this only decorates what renderGrid produced when the screen is narrow.
+let _phoneDay=null, _phoneWeekKey=null;
+function _isPhone(){ return window.innerWidth<=640; }
+function _phoneWeek(){
+  const grid=$('#calGrid'); if(!grid) return;
+  const cols=[...grid.querySelectorAll('.daycol')];
+  if(!_isPhone()||!cols.length){ grid.classList.remove('paged'); const st=grid.querySelector('.dstrip'); if(st) st.remove(); return; }
+  const todayISO=iso(new Date());
+  const key=String(weekOffset);
+  const daysWith=cols.filter(c=>!c.querySelector('.emptyday')).map(c=>c.getAttribute('data-day'));
+  if(_phoneWeekKey!==key||!cols.some(c=>c.getAttribute('data-day')===_phoneDay)){
+    _phoneWeekKey=key;
+    // Land on today if it is in this week, else the first day that has reports.
+    _phoneDay=cols.some(c=>c.getAttribute('data-day')===todayISO)?todayISO:(daysWith[0]||cols[0].getAttribute('data-day'));
+  }
+  const names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const chips=cols.map(c=>{ const d=c.getAttribute('data-day'); const dt=new Date(d+'T12:00:00');
+    const n=(c.querySelector('.dcount')||c.querySelector('.daypill b')||{}).textContent||''; const empty=!!c.querySelector('.emptyday');
+    return `<div class="dchip${d===_phoneDay?' on':''}${d===todayISO?' today':''}${empty?' none':''}" data-day="${d}"><small>${names[dt.getDay()]}</small><b>${dt.getDate()}</b><i>${n}</i></div>`; }).join('');
+  let strip=grid.querySelector('.dstrip');
+  if(!strip){ strip=document.createElement('div'); strip.className='dstrip'; grid.prepend(strip); }
+  strip.innerHTML=chips;
+  grid.classList.add('paged');
+  cols.forEach(c=>c.classList.toggle('on',c.getAttribute('data-day')===_phoneDay));
+  strip.querySelectorAll('.dchip').forEach(ch=>{ ch.onclick=(e)=>{ e.stopPropagation(); _phoneDay=ch.getAttribute('data-day'); _phoneWeek(); erTrack('phone_day',{day:_phoneDay}); }; });
+  const on=strip.querySelector('.dchip.on'); if(on&&on.scrollIntoView) try{ on.scrollIntoView({block:'nearest',inline:'center'}); }catch(e){}
+}
+// Swipe left/right on the calendar: next/previous day, and across the week edges.
+(function(){
+  let x0=null,y0=null,t0=0;
+  const grid=document.getElementById('calGrid'); if(!grid) return;
+  grid.addEventListener('touchstart',e=>{ if(!_isPhone()||!grid.classList.contains('paged')) return; const t=e.touches[0]; x0=t.clientX; y0=t.clientY; t0=Date.now(); },{passive:true});
+  grid.addEventListener('touchend',e=>{
+    if(x0==null) return; const t=e.changedTouches[0]; const dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)*0.8||Date.now()-t0>600) return;
+    const cols=[...grid.querySelectorAll('.daycol')].map(c=>c.getAttribute('data-day'));
+    const i=cols.indexOf(_phoneDay); const dir=dx<0?1:-1; const j=i+dir;
+    if(j>=0&&j<cols.length){ _phoneDay=cols[j]; _phoneWeek(); }
+    else { weekOffset+=dir; _phoneWeekKey=null; renderCalendar(); if(dir<0){ const cs=[...grid.querySelectorAll('.daycol')]; if(cs.length){ _phoneDay=cs[cs.length-1].getAttribute('data-day'); _phoneWeek(); } } }
+    erTrack('phone_swipe',{dir:dir>0?'next':'prev'});
+  },{passive:true});
+  window.addEventListener('resize',()=>{ if(calView==='grid'&&!dayView) _phoneWeek(); });
+})();
 
 /* ===== view switching: grid (default) / list / month ===== */
-// The app always OPENS on the full month view; switching views still works during the session.
-let calView = 'month';
+// Desktop always OPENS on the full month view; phones open on the day-strip week (one day at a time),
+// which is the closest phone equivalent of the desktop grid. Switching views still works during the session.
+let calView = (window.innerWidth<=640) ? 'grid' : 'month';
 let monthOffset = 0;
 const _mcap = r=>{const n=parseFloat(String(r.marketCap||'').replace(/[$,]/g,''));return isFinite(n)?n:0;};
 let dayView = null;  // when set to a YYYY-MM-DD, the calendar drills into that single day
