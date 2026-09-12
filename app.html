@@ -2704,14 +2704,13 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
 
   // Done — checklist + confetti, then drop them into My Stocks.
   function renderDone(){
-    const n=wl.list().length, signed=!!(window.erWatch&&erWatch.signedIn()), inst=isStandalone()||LS('er_installed')==='1';
+    const n=wl.list().length, signed=!!(window.erWatch&&erWatch.signedIn());
     const first=wl.list().map(nextReport).filter(Boolean).sort((a,b)=>a.days-b.days)[0];
     const inner=`<div class="obdone"><div class="big">🎯</div><h2>You're on the radar</h2>
       <p class="sub">${first?`First up: <b style="color:var(--text)">${first.sym}</b> ${first.when.toLowerCase()==='today'?'today':first.when.toLowerCase()==='tomorrow'?'tomorrow':'on '+first.when}${first.sess?' '+first.sess:''}.`:'We will flag your first report the moment a date is set.'}</p>
       <div class="obchecks">
         <div><i>✓</i>Watching ${n} stock${n===1?'':'s'}</div>
         <div class="${signed?'':'no'}"><i>${signed?'✓':'·'}</i>${signed?'Result alerts on':'Not saved yet — sign in to keep them and get alerts'}</div>
-        <div class="${inst?'':'no'}"><i>${inst?'✓':'·'}</i>${inst?'On your home screen':'Not installed yet'}</div>
       </div>
       <button class="obnext" id="obNext" style="width:100%">Open my calendar</button></div>`;
     frame(inner,{skip:false});
@@ -2745,7 +2744,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     LS('er_onboarded',completed?'1':'skipped');
     if(completed){ try{ sessionStorage.setItem('er_ob_done','1'); }catch(e){} }
     if(completed&&window.erMarkOnboarded) erMarkOnboarded('done');   // on the account (if any), so it never replays
-    if(window._erOnboardingAccount&&window.erMarkInstallPrompted) erMarkInstallPrompted();   // the install ask is once per account
+
     try{ sessionStorage.setItem('er_auth_prompted','1'); }catch(e){}   // sign-in was offered inside the flow; no second popup this session
     const signed=!!(window.erWatch&&erWatch.signedIn());
     // "Open my calendar" means the calendar: close anything else that is open (the sign-in
@@ -2773,15 +2772,11 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
     }
     if(!host){ host=document.createElement('div'); host.id='ob'; document.body.appendChild(host); }
     window._erOnboarding=true; window._erOnboardingAccount=!!(opts&&opts.account); step=0;
-    if(opts&&opts.account){
-      // Signed in: the account exists, the picking is done. The only thing left to offer is
-      // the install, once, from the second visit -- never the stock picker again.
-      if(!(installMode()&&VISITS>=2)) { window._erOnboarding=false; return; }
-      steps=['install'];
-    } else {
-      if(window.erWatch&&erWatch.signedIn()){ window._erOnboarding=false; return; }   // visitor flow is for visitors
-      steps=['pick','week']; if(installMode()&&VISITS>=2) steps.push('install');
-    }
+    // Signed in: the account exists, the picking is done -- nothing to show. (The home-screen
+    // install step was retired 2026-09-12; the manifest/service worker stay, so the app is still
+    // installable for anyone who knows the gesture.)
+    if((opts&&opts.account)||(window.erWatch&&erWatch.signedIn())){ window._erOnboarding=false; return; }
+    steps=['pick','week'];
     host.classList.add('on'); erTrack('onboard_start',{steps:steps.length,mobile:isMobile()?1:0});
     if(!_NAMES) fetch('names.json').then(r=>r.ok?r.json():{}).then(j=>{ _NAMES=j||{}; if(steps[step]==='pick') host.querySelectorAll('.obt small').forEach(el=>{ el.textContent=shortName(el.parentElement.dataset.s); }); }).catch(()=>{});
     render();
@@ -2844,7 +2839,7 @@ setInterval(loadLiveCalendar, 180000);  // refresh calendar from the worker ever
   
   <span>Data is informational only — not investment advice.</span>
 </footer>
-<script type="module" src="auth.js?v=20260907p">
+<script type="module" src="auth.js?v=20260912a">
 /* Resizable rail. Width lives in a CSS custom property so the panel and the body padding cannot
    drift apart, and persists per browser — someone who widens it to read a transcript should not
    have to do it again on every visit. Bounds are deliberate: below ~260px the EPS cards collapse,

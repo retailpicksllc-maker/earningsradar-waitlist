@@ -97,11 +97,7 @@ async function _wlSync(user) {
     try { localStorage.setItem("er_onboarded", "1"); } catch (e) {}
     if (!data.onboarded) window.erMarkOnboarded("done");
     if (window._erOnboarding && !window._erOnboardingAccount && window.erOnboardClose) window.erOnboardClose();
-    // The one thing still worth asking a signed-in person: put the app on your home screen.
-    // Once per account, and only from the second visit (app.html decides the visit rule).
-    let askedHere = false; try { askedHere = localStorage.getItem("er_inst_asked_" + user.uid) === "1"; } catch (e) {}
-    if (!data.installPrompted && !askedHere && typeof window.erOnboard === "function" && !window._erOnboarding)
-      setTimeout(() => window.erOnboard({ account: true }), Math.max(0, 5000 - performance.now()));
+    // Nothing is shown to a signed-in person: the home-screen install ask was retired 2026-09-12.
   } catch (e) { console.warn("watchlist sync failed:", e && e.code, e && e.message); }
 }
 window.erMarkOnboarded = (state) => {
