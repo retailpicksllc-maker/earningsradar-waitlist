@@ -1312,6 +1312,7 @@ async function loadLiveCalendar(){
     const mapped=rows.map(mapWorkerRow).filter(x=>x.symbol&&x.date);
     if(!mapped.length) showStaleNotice();
     if(mapped.length){ DATA=mapped; _capOf=null; renderCalendar(); try{ renderRail(); }catch(e){}
+      try{ _stampLive(); }catch(e){}
       // A popup opened from a #TICKER deep link renders before this first fetch lands, so it
       // showed 'reports soon' with dashes while the recap below had the real numbers.
       // Re-open it once, silently, now that the event rows exist.
@@ -2256,6 +2257,12 @@ sIn.addEventListener('keydown', e=>{
 });
 sRes.addEventListener('mousedown', e=>{ const sr=e.target.closest('.sr'); if(sr){ e.preventDefault(); openSym(sr.getAttribute('data-sym')); }});
 document.addEventListener('click', e=>{ if(!e.target.closest('.searchbox')) sRes.classList.remove('on'); });
+// Freshness stamp: the time the live rows were fetched from the API (BUILT_AT is only the fallback
+// while the first fetch is in flight -- a build date under live data read as a month-old page).
+function _stampLive(){
+  const t=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  $('#calNote').textContent='Live earnings · updated '+t+' ET';
+}
 $('#calNote').textContent = 'Live earnings · updated '+BUILT_AT;
 // Open on the first week (this week or later) that actually has upcoming earnings,
 // so a Friday/weekend visit lands on populated days instead of an empty past week.
