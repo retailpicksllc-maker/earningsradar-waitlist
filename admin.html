@@ -238,25 +238,27 @@ $("#csv").onclick = () => {
    this browser's localStorage, never in the page source). Sign-ups per day come from the
    accounts list, so each day shows visitors → sign-ups → conversion side by side. ---- */
 const API = "https://api.earningsradar.org";
-function apiKey(force) {
-  let k = null; try { k = localStorage.getItem("er_admin_key"); } catch (e) {}
-  if (!k || force) {
-    k = prompt("Earnings Radar API write key (stored only in this browser):", k || "");
-    if (k) { try { localStorage.setItem("er_admin_key", k.trim()); } catch (e) {} }
-  }
-  return (k || "").trim();
+function apiKey() { try { return (localStorage.getItem("er_admin_key") || "").trim(); } catch (e) { return ""; } }
+function askKey(msg) {
+  // Inline, not prompt(): a native dialog blocks the page (and any tooling driving it).
+  $("#tout").innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="mut">${esc(msg || "Enter the API write key to see visitors (kept only in this browser).")}</span>
+      <input id="keyin" type="password" placeholder="API key" style="background:#0A1024;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:7px 10px;min-width:280px">
+      <button id="keysave" style="padding:7px 14px">Save</button></div>`;
+  $("#keysave").onclick = () => { const k = $("#keyin").value.trim(); if (!k) return; try { localStorage.setItem("er_admin_key", k); } catch (e) {} loadTraffic(); };
+  $("#keyin").onkeydown = (e) => { if (e.key === "Enter") $("#keysave").click(); };
 }
-$("#keybtn").onclick = () => { if (apiKey(true)) loadTraffic(); };
+$("#keybtn").onclick = () => askKey("Enter a new API key:");
 const DAYFMT = (d) => { const [y, m, dd] = d.split("-").map(Number); return new Date(y, m - 1, dd).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); };
 async function loadTraffic() {
   $("#traffic").style.display = "";
-  const k = apiKey(false);
-  if (!k) { $("#tout").innerHTML = '<span class="mut">Enter the API key to see visitors.</span>'; return; }
+  const k = apiKey();
+  if (!k) { askKey(); return; }
   $("#tout").innerHTML = '<span class="mut">Loading…</span>';
   let j;
   try {
     const r = await fetch(`${API}/v1/admin/visitors?days=30`, { headers: { "X-API-Key": k }, cache: "no-store" });
-    if (r.status === 401) { $("#tout").innerHTML = '<span class="mut">That key was refused. Click “API key” to re-enter it.</span>'; return; }
+    if (r.status === 401) { askKey("That key was refused — enter it again:"); return; }
     if (!r.ok) throw new Error(r.status);
     j = await r.json();
   } catch (e) { $("#tout").innerHTML = `<span class="mut">Could not load traffic (${esc(String(e.message || e))}).</span>`; return; }
