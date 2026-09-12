@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Earnings Radar — Accounts</title>
+<title>Earnings Radar — Admin</title>
 <style>
   :root{--bg:#0A1024;--card:#0d1430;--line:#2F3B63;--txt:#ECECF1;--muted:#9AA4C2;--blue:#6BA5FF;--green:#33D69F}
   *{box-sizing:border-box}
@@ -40,14 +40,24 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Accounts</h1>
-  <div class="sub">Who signed up, when they last came back, and how long they stay.</div>
+  <h1>Earnings Radar — Admin</h1>
+  <div class="sub">Who visits, who signs up, who comes back.</div>
   <div class="bar">
     <button id="signin">Sign in with Google</button>
     <button id="refresh" class="ghost" style="display:none">Refresh</button>
     <button id="csv" class="ghost" style="display:none">Download CSV</button>
     <span id="who" class="mut"></span>
   </div>
+  <div id="traffic" style="display:none;margin-bottom:26px">
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+      <h2 style="font-size:17px;margin:0">Traffic</h2>
+      <span class="mut" style="font-size:12.5px">Every visitor, counted by the API on each calendar load — no cookie banner, no lag. Days are US Eastern.</span>
+      <button id="keybtn" class="ghost" style="margin-left:auto;padding:5px 10px;font-size:12px">API key</button>
+    </div>
+    <div id="tstats" class="stats"></div>
+    <div id="tout" class="msg" style="padding:14px 0"></div>
+  </div>
+  <h2 style="font-size:17px;margin:0 0 8px">Accounts</h2>
   <div id="stats" class="stats"></div>
   <div id="out" class="msg">Sign in with the owner account to view.</div>
 </div>
@@ -151,6 +161,7 @@ async function load() {
     });
     ROWS.forEach((r) => { r.held = heldMs(r); });
     render();
+    loadTraffic();
   } catch (e) {
     $("#out").innerHTML = '<div class="msg">Could not read accounts (' + esc(e.code || e.message) +
       ').<br>Firestore rules must allow this account to list <code>users</code>.</div>';
@@ -223,7 +234,67 @@ $("#csv").onclick = () => {
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
   a.download = "earnings-radar-accounts.csv"; a.click();
 };
-$("#refresh").onclick = load;
+/* ---- Traffic: /v1/admin/visitors (write-key protected; the key is asked for once and kept in
+   this browser's localStorage, never in the page source). Sign-ups per day come from the
+   accounts list, so each day shows visitors → sign-ups → conversion side by side. ---- */
+const API = "https://api.earningsradar.org";
+function apiKey(force) {
+  let k = null; try { k = localStorage.getItem("er_admin_key"); } catch (e) {}
+  if (!k || force) {
+    k = prompt("Earnings Radar API write key (stored only in this browser):", k || "");
+    if (k) { try { localStorage.setItem("er_admin_key", k.trim()); } catch (e) {} }
+  }
+  return (k || "").trim();
+}
+$("#keybtn").onclick = () => { if (apiKey(true)) loadTraffic(); };
+const DAYFMT = (d) => { const [y, m, dd] = d.split("-").map(Number); return new Date(y, m - 1, dd).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); };
+async function loadTraffic() {
+  $("#traffic").style.display = "";
+  const k = apiKey(false);
+  if (!k) { $("#tout").innerHTML = '<span class="mut">Enter the API key to see visitors.</span>'; return; }
+  $("#tout").innerHTML = '<span class="mut">Loading…</span>';
+  let j;
+  try {
+    const r = await fetch(`${API}/v1/admin/visitors?days=30`, { headers: { "X-API-Key": k }, cache: "no-store" });
+    if (r.status === 401) { $("#tout").innerHTML = '<span class="mut">That key was refused. Click “API key” to re-enter it.</span>'; return; }
+    if (!r.ok) throw new Error(r.status);
+    j = await r.json();
+  } catch (e) { $("#tout").innerHTML = `<span class="mut">Could not load traffic (${esc(String(e.message || e))}).</span>`; return; }
+  const days = j.days || [];
+  const byDay = Object.fromEntries(days.map((d) => [d.day, d]));
+  // sign-ups per day (ET), from the accounts already loaded
+  const su = {};
+  for (const r of ROWS) {
+    if (!r.created) continue;
+    const et = new Date(r.created.getTime() - 4 * 3600000).toISOString().slice(0, 10);
+    su[et] = (su[et] || 0) + 1;
+  }
+  const today = j.today, sum = (arr, k) => arr.reduce((a, d) => a + (d[k] || 0), 0);
+  const last = (n) => days.filter((d) => d.day !== today).slice(0, n);
+  const t = byDay[today] || { visitors: 0, hits: 0, mobile: 0 };
+  const y = last(1)[0] || { visitors: 0 };
+  const w7 = last(7), w30 = last(30);
+  const mob = sum(days, "mobile"), vis = sum(days, "visitors");
+  $("#tstats").innerHTML =
+    [["Today so far", t.visitors], ["Yesterday", y.visitors],
+     ["Last 7 days", sum(w7, "visitors")], ["Last 30 days", sum(w30, "visitors")],
+     ["On phones", vis ? Math.round(100 * mob / vis) + "%" : "—"],
+     ["Sign-ups (7d)", w7.reduce((a, d) => a + (su[d.day] || 0), 0)]]
+    .map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  const mx = Math.max(1, ...days.map((d) => d.visitors));
+  $("#tout").innerHTML = `<table><thead><tr><th>Day</th><th>Visitors</th><th></th><th>Calendar loads</th><th>On phones</th><th>Sign-ups</th><th>Conversion</th></tr></thead><tbody>` +
+    days.map((d) => {
+      const s = su[d.day] || 0, conv = d.visitors ? (100 * s / d.visitors).toFixed(1) + "%" : "—";
+      return `<tr><td>${DAYFMT(d.day)}${d.day === today ? ' <span class="pill">today, partial</span>' : ""}</td>
+        <td class="em">${d.visitors}</td>
+        <td style="width:34%"><div style="height:8px;border-radius:99px;background:#2F6BFF;width:${Math.round(100 * d.visitors / mx)}%"></div></td>
+        <td>${d.hits}<div class="mut">${d.visitors ? (d.hits / d.visitors).toFixed(1) : "—"} per visitor</div></td>
+        <td>${d.visitors ? Math.round(100 * d.mobile / d.visitors) + "%" : "—"}</td>
+        <td>${s || "—"}</td><td>${s ? conv : "—"}</td></tr>`;
+    }).join("") + `</tbody></table>
+    <div class="mut" style="font-size:12px;margin-top:8px">Counting started Sep 9, 2026. A visitor is one device per day; loads repeat every 3 minutes while the calendar is open, so loads ÷ visitors ≈ minutes on site ÷ 3.</div>`;
+}
+$("#refresh").onclick = () => { load().then(loadTraffic); };
 $("#signin").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => alert(e.message));
 
 onAuthStateChanged(auth, (u) => {
@@ -239,6 +310,7 @@ onAuthStateChanged(auth, (u) => {
     $("#refresh").style.display = $("#csv").style.display = "none";
     $("#who").textContent = "";
     $("#stats").innerHTML = "";
+    $("#traffic").style.display = "none";
     $("#out").innerHTML = '<div class="msg">Sign in with the owner account to view.</div>';
   }
 });
