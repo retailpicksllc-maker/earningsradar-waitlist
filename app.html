@@ -582,6 +582,86 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
   @keyframes obfade{to{opacity:1}}
   #obConfetti{position:fixed;inset:0;pointer-events:none;z-index:100001}
   @media (max-width:420px){ .obgrid{grid-template-columns:repeat(4,1fr);gap:7px} .obt .tile{width:40px;height:40px} .obcard{padding:18px 14px 14px} .obchip{display:none!important} }
+
+  /* ══ PHONE LAYOUT (≤640px) — 70% of visitors. Bottom tab bar, compact sticky controls,
+     dense rows, 4-up tiles. Desktop is untouched. ══ */
+  .tabbar{display:none}
+  @media(max-width:640px){
+    body{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+    /* top bar: brand + sign-in only; the page tabs move to the bottom */
+    .nav .links#navTabs{display:none}
+    .nav .brand .bname{display:inline}
+    .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:45;display:grid;grid-template-columns:repeat(4,1fr);
+      background:rgba(10,16,36,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      border-top:1px solid var(--border2);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+    .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:var(--muted);font-size:10.5px;font-weight:700;padding:5px 0 3px;border-radius:10px}
+    .tabbar a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .tabbar a.active{color:var(--blueLt)}
+    .tabbar a.active svg{stroke:var(--blueLt)}
+    .railtoggle{bottom:calc(74px + env(safe-area-inset-bottom));right:12px;padding:9px 14px;font-size:12.5px}
+    /* calendar chrome: no hero title, one compact sticky control bar */
+    .calhead{display:none}
+    .calbar{position:sticky;top:0;z-index:30;margin:8px 0 12px;padding:8px 9px;gap:8px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    .weeknav{width:100%;justify-content:space-between}
+    .weeklabel{min-width:0;flex:1;font-size:15px}
+    .weeklabel small{font-size:11px}
+    .arrow{width:34px;height:34px}
+    .viewswitch{order:2}
+    .mystocks{order:3;margin-left:auto;padding:7px 11px;font-size:12.5px;white-space:nowrap}
+    .searchbox{order:4;min-width:0;width:100%;padding:7px 11px;display:none}
+    .searchbox.open{display:flex}
+    #sbtn{display:grid!important}
+    .sbtn{order:3;width:34px;height:34px;border-radius:10px;border:1px solid var(--border2);background:var(--card);color:var(--text);display:grid;place-items:center;cursor:pointer;font-size:15px}
+    .sbtn.on{background:rgba(47,107,255,.2);border-color:var(--blue)}
+    /* grid: four small tiles per row instead of two posters */
+    .tiles{grid-template-columns:repeat(4,1fr)!important;gap:8px}
+    .tile{border-radius:12px}
+    .tile.mono{font-size:15px}
+    .tick2{font-size:10.5px;margin-top:4px;letter-spacing:.2px}
+    .tpx{font-size:10px}
+    .moretile{border-radius:12px}
+    .dayhead{margin-bottom:8px}
+    /* an empty weekday is one quiet line, not a block of air */
+    .calweek .daycol:has(.emptyday) .dayhead{margin-bottom:0;display:inline-block}
+    .calweek .daycol:has(.emptyday){display:flex;align-items:baseline;gap:8px;padding:2px 0 6px}
+    .calweek .daycol:has(.emptyday) .dlabel{font-size:14px;color:var(--muted)}
+    .emptyday{padding:0;text-align:left}
+    .emptyday::after{content:' no reports'}
+    .sesshead{padding:6px 10px;font-size:12px;margin-bottom:8px}
+    /* month view: five per cell, smaller */
+    .calmonth .mcell{min-height:0;padding:9px 9px 10px}
+    .calmonth .mlogos{grid-template-columns:repeat(5,1fr);gap:5px}
+    .calmonth .mlogos .tile{border-radius:7px}
+    /* list rows: keep the EPS box, drop revenue + bell; two tight lines */
+    .calist .lrow{grid-template-columns:1fr auto auto!important;gap:8px;padding:9px 10px}
+    .calist .lbox{display:flex!important;flex-direction:column;align-items:flex-end;padding:5px 9px;min-width:84px}
+    .calist .lrow > div:nth-child(3){display:none!important}   /* the revenue box: not on phones */
+    .calist .lbox .k{font-size:9px}
+    .calist .lbox .v{font-size:12.5px}
+    .calist .lbell{display:none!important}
+    .calist .lco .tile{width:34px;height:34px;border-radius:9px}
+    .calist .lt{font-size:14px}
+    .calist .lm{font-size:11px}
+    .calist .lpx{font-size:12.5px}
+    /* detail sheet: header must never stack letters */
+    .sheet .top{align-items:flex-start;gap:10px}
+    .sheet .top *,.sheet .top{overflow-wrap:normal!important;word-break:normal!important}
+    .sheet .top > div:nth-child(2){flex:1 1 40%;min-width:92px}
+    .sheet .top h2{font-size:18px;line-height:1.1;white-space:nowrap}
+    .sheet .top .nm{font-size:11.5px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .detpx{flex:0 1 auto;max-width:36%;min-width:0}
+    .detpx .px{font-size:15px}
+    .detpx .ah{font-size:10px;white-space:normal}
+    .detpx .phase{font-size:8px}
+    .sheet .top .wstar{width:30px;height:30px;font-size:16px}
+    .sheet .top .shwrap{display:none}
+    .sheet .x{width:30px;height:30px}
+    .dtabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .dtab{padding:9px 11px;font-size:13px}
+    /* pages */
+    .ptitle h1{font-size:22px}
+    .pempty{padding:20px 14px;font-size:14px}
+  }
 </style>
 </head>
 <body>
@@ -621,6 +701,7 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
       <button class="vbtn" data-view="month" title="Month" aria-label="Month view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6"/><line x1="16" y1="2.5" x2="16" y2="6"/></svg></button>
     </div>
     <button class="mystocks" id="myStocksBtn" title="Show only your watched stocks">★ My Stocks</button>
+    <button class="sbtn" id="sbtn" type="button" title="Search" aria-label="Search" style="display:none">🔎</button>
     <div class="searchbox" style="position:relative">🔎<input id="search" autocomplete="off" spellcheck="false" placeholder="Search any ticker…" /><div id="searchResults" class="sresults"></div></div>
   </div>
 
@@ -635,6 +716,12 @@ window.erTrack=function(ev,p){try{gtag('event',ev,p||{});}catch(e){}};
 <div class="railgrip" id="railGrip" role="separator" aria-orientation="vertical" aria-label="Resize panel" tabindex="0"></div>
 <aside class="rail" id="rail" aria-label="Today's earnings"></aside>
 <button class="railtoggle" id="railToggle" type="button">Today</button>
+<nav class="tabbar" id="tabbar" aria-label="Sections">
+  <a href="#" data-page="cal" class="active"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>Calendar</a>
+  <a href="#" data-page="earn"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg>Earnings</a>
+  <a href="#" data-page="my"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>My Stocks</a>
+  <a href="#" data-page="news"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 9h6M7 12.5h10M7 16h10"/></svg>News</a>
+</nav>
 
 <div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
 
@@ -2045,6 +2132,9 @@ let _allTickers=[...new Set(DATA.map(r=>r.symbol).filter(Boolean))];   // calend
   }catch(e){}
 })();
 const sIn=$('#search'), sRes=$('#searchResults'); let _shl=-1, _smatches=[];
+// Phone: the search box is collapsed behind a button so the control bar stays one row tall.
+(function(){ const b=document.getElementById('sbtn'), box=document.querySelector('.calbar .searchbox'); if(!b||!box) return;
+  b.onclick=()=>{ const on=!box.classList.contains('open'); box.classList.toggle('open',on); b.classList.toggle('on',on); if(on){ sIn.focus(); } else { sIn.value=''; sRes.classList.remove('on'); } }; })();
 sIn.addEventListener('focus',()=>{ if(typeof _NM!=='undefined'&&!_NM&&!_NMP){ _NMP=fetch('names.json').then(r=>r.ok?r.json():{}).catch(()=>({})); _NMP.then(j=>{_NM=j||{};}); } },{once:true});
 // Search ranks by size, not alphabet: "NV" must offer NVDA before NVA and NVAX, "AP" Apple
 // before APA. Caps come from the calendar rows (five months of events covers every large cap);
@@ -2128,7 +2218,7 @@ function _calShow(on){
 }
 function setPage(p){
   PAGE=p;
-  document.querySelectorAll('#navTabs a[data-page]').forEach(a=>a.classList.toggle('active',a.getAttribute('data-page')===p));
+  document.querySelectorAll('#navTabs a[data-page], #tabbar a[data-page]').forEach(a=>a.classList.toggle('active',a.getAttribute('data-page')===p));
   _calShow(p==='cal');
   const pages={earn:'pageEarn',my:'pageMy',news:'pageNews'};
   Object.values(pages).forEach(id=>{const el=document.getElementById(id); if(el) el.hidden=true;});
@@ -2140,7 +2230,7 @@ function setPage(p){
   erTrack('page_view',{page:p});
   window.scrollTo({top:0});
 }
-document.querySelectorAll('#navTabs a[data-page]').forEach(a=>{
+document.querySelectorAll('#navTabs a[data-page], #tabbar a[data-page]').forEach(a=>{
   a.addEventListener('click',e=>{ e.preventDefault(); const p=a.getAttribute('data-page'); if(p!==PAGE) setPage(p); });
 });
 const _fmtRevM2=v=>v==null?'—':(v>=1000?('$'+(v/1000).toFixed(1)+'B'):('$'+Math.round(v)+'M'));
@@ -2158,8 +2248,20 @@ function renderEarnPage(){
   // !== 'bmo', not === 'amc': an unknown session must land in After Close, not vanish.
   const amc=todays.filter(r=>sessionOf(r.time)!=='bmo');
   const nice=new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
-  el.innerHTML=`<div class="ptitle"><h1>Today's Earnings</h1><p>${nice} · live results as they land</p></div>`
-    + sec('Before Open',bmo) + sec('After Close',amc);
+  let body;
+  if(!todays.length){
+    // Nothing today (weekend, holiday): say so once and show the next day that has reports,
+    // rather than two empty boxes.
+    const nxt=DATA.filter(r=>r.date>t&&hasData(r)).sort((a,b)=>a.date<b.date?-1:1)[0];
+    if(nxt){
+      const rows=DATA.filter(r=>r.date===nxt.date&&hasData(r)).sort((a,b)=>(+String(b.marketCap).replace(/\D/g,'')||0)-(+String(a.marketCap).replace(/\D/g,'')||0));
+      const d=new Date(nxt.date+'T12:00:00').toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+      body=`<div class="pempty" style="margin-bottom:14px">No reports today.</div>`
+        + `<div class="psec"><h2>Next up · ${esc(d)} <span class="dcount">${rows.length}</span></h2><div class="calist" style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">${rows.slice(0,12).map(r=>_lrow(r,false)).join('')}</div>`
+        + (rows.length>12?`<div class="lmore" onclick="dayView='${nxt.date}';setPage('cal');renderCalendar()">See all ${rows.length} →</div>`:'')+`</div>`;
+    } else body=`<div class="pempty">No reports today.</div>`;
+  } else body=sec('Before Open',bmo) + sec('After Close',amc);
+  el.innerHTML=`<div class="ptitle"><h1>Today's Earnings</h1><p>${nice} · live results as they land</p></div>` + body;
   upgradeLogos(el); pollPrices();
 }
 function renderMyPage(){
